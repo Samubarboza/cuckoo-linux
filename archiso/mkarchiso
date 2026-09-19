@@ -813,6 +813,25 @@ _make_bootmode_uefi-x64.grub.eltorito() {
     return 1
 }
 
+# Prepare shim and the signed Fedora GRUB for UEFI booting with Secure Boot
+_make_bootmode_uefi.shim-grub() {
+    _msg_info "Setting up shim and GRUB for UEFI booting with Secure Boot..."
+
+    # shim is the default boot file and loads grubx64.efi and mmx64.efi from the same folder
+    install -d -m 0755 -- "${isofs_dir}/EFI/BOOT"
+    install -m 0644 -- "${profile}/secureboot/shimx64.efi" "${isofs_dir}/EFI/BOOT/BOOTX64.EFI"
+    install -m 0644 -- "${profile}/secureboot/grubx64.efi" "${profile}/secureboot/mmx64.efi" "${isofs_dir}/EFI/BOOT/"
+    # Public key that users enroll in MokManager on the first boot
+    install -m 0644 -- "${profile}/secureboot/MOK.cer" "${isofs_dir}/"
+
+    # Create a FAT image for the EFI system partition and copy the same files to it
+    efiboot_files=("${isofs_dir}/EFI" "${isofs_dir}/MOK.cer")
+    _make_efibootimg
+    mcopy -s -i "${efibootimg}" "${efiboot_files[@]}" '::/'
+
+    _msg_info "Done! shim and GRUB set up for UEFI booting successfully."
+}
+
 # Copy UEFI-architecture-specific files
 _make_common_bootmode_uefi.systemd-boot_copy_files() {
     local target_arch="$1"
@@ -1107,6 +1126,37 @@ _validate_requirements_bootmode_uefi.grub() {
                 _msg_error "Validating '${bootmode}': No configuration file found in '${profile}/grub/'!" 0
             fi
         done
+    fi
+}
+
+_validate_requirements_bootmode_uefi.shim-grub() {
+    local secureboot_file
+
+    _validate_common_requirements_bootmode_uefi
+
+    # shimx64.efi and grubx64.efi only exist for x86_64
+    if [[ "$arch" != 'x86_64' ]]; then
+        (( validation_error=validation_error+1 ))
+        _msg_error "Validating '${bootmode}': only the 'x86_64' architecture is supported!" 0
+    fi
+
+    # shellcheck disable=SC2076
+    if [[ " ${bootmodes[*]} " =~ ' uefi.systemd-boot ' || " ${bootmodes[*]} " =~ ' uefi.grub ' ]]; then
+        (( validation_error=validation_error+1 ))
+        _msg_error "Validating '${bootmode}': cannot be used with the 'uefi.systemd-boot' or 'uefi.grub' boot modes!" 0
+    fi
+
+    for secureboot_file in shimx64.efi grubx64.efi mmx64.efi MOK.cer; do
+        if [[ ! -f "${profile}/secureboot/${secureboot_file}" ]]; then
+            (( validation_error=validation_error+1 ))
+            _msg_error "Validating '${bootmode}': file '${profile}/secureboot/${secureboot_file}' not found!" 0
+        fi
+    done
+
+    # Without a signed kernel shim will refuse to boot it
+    if [[ -z "${secureboot_key_dir}" ]]; then
+        (( validation_error=validation_error+1 ))
+        _msg_error "Validating '${bootmode}': use the -S option to give the key folder for signing the kernel!" 0
     fi
 }
 
@@ -1480,6 +1530,11 @@ _add_xorrisofs_options_uefi.systemd-boot() {
 
 # GRUB in an attached EFI system partition and El Torito
 _add_xorrisofs_options_uefi.grub() {
+    _add_common_xorrisofs_options_uefi
+}
+
+# shim and GRUB in an attached EFI system partition and El Torito
+_add_xorrisofs_options_uefi.shim-grub() {
     _add_common_xorrisofs_options_uefi
 }
 
