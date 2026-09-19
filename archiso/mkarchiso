@@ -815,7 +815,12 @@ _make_bootmode_uefi-x64.grub.eltorito() {
 
 # Prepare shim and the signed Fedora GRUB for UEFI booting with Secure Boot
 _make_bootmode_uefi.shim-grub() {
+    local files_to_copy=()
+
     _msg_info "Setting up shim and GRUB for UEFI booting with Secure Boot..."
+
+    # Prepare configuration files
+    _run_once _make_common_bootmode_grub_cfg
 
     # shim is the default boot file and loads grubx64.efi and mmx64.efi from the same folder
     install -d -m 0755 -- "${isofs_dir}/EFI/BOOT"
@@ -823,6 +828,25 @@ _make_bootmode_uefi.shim-grub() {
     install -m 0644 -- "${profile}/secureboot/grubx64.efi" "${profile}/secureboot/mmx64.efi" "${isofs_dir}/EFI/BOOT/"
     # Public key that users enroll in MokManager on the first boot
     install -m 0644 -- "${profile}/secureboot/MOK.cer" "${isofs_dir}/"
+
+    # Fedora GRUB reads grub.cfg from its own folder, or from /EFI/fedora if that fails.
+    # It finds the ISO volume by its unique file and loads the menu from there.
+    printf '%s\n' \
+        "if search --no-floppy --set=root --file '${search_filename}'; then" \
+        "    configfile /boot/grub/grub.cfg" \
+        "else" \
+        "    echo 'Could not find the ISO volume!'" \
+        "fi" >"${isofs_dir}/EFI/BOOT/grub.cfg"
+    install -d -m 0755 -- "${isofs_dir}/EFI/fedora"
+    install -m 0644 -- "${isofs_dir}/EFI/BOOT/grub.cfg" "${isofs_dir}/EFI/fedora/"
+
+    # Copy the GRUB menu files
+    files_to_copy+=("${work_dir}/grub/"*)
+    if compgen -G "${profile}/grub/!(*.cfg)" &>/dev/null; then
+        files_to_copy+=("${profile}/grub/"!(*.cfg))
+    fi
+    install -d -m 0755 -- "${isofs_dir}/boot/grub"
+    cp -r --remove-destination -- "${files_to_copy[@]}" "${isofs_dir}/boot/grub/"
 
     # Create a FAT image for the EFI system partition and copy the same files to it
     efiboot_files=("${isofs_dir}/EFI" "${isofs_dir}/MOK.cer")
@@ -1144,6 +1168,11 @@ _validate_requirements_bootmode_uefi.shim-grub() {
     if [[ " ${bootmodes[*]} " =~ ' uefi.systemd-boot ' || " ${bootmodes[*]} " =~ ' uefi.grub ' ]]; then
         (( validation_error=validation_error+1 ))
         _msg_error "Validating '${bootmode}': cannot be used with the 'uefi.systemd-boot' or 'uefi.grub' boot modes!" 0
+    fi
+
+    if [[ ! -f "${profile}/grub/grub.cfg" ]]; then
+        (( validation_error=validation_error+1 ))
+        _msg_error "Validating '${bootmode}': file '${profile}/grub/grub.cfg' not found!" 0
     fi
 
     for secureboot_file in shimx64.efi grubx64.efi mmx64.efi MOK.cer; do
