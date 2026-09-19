@@ -11,6 +11,7 @@ An archiso profile consists of several configuration files and a directory for f
    ├── efiboot/
    ├── syslinux/
    ├── grub/
+   ├── secureboot/
    ├── bootstrap_packages.arch
    ├── packages.arch
    ├── pacman.conf
@@ -50,6 +51,8 @@ The image file is constructed from some of the variables in ``profiledef.sh``: `
     booting (IA32 UEFI) will also be added.
   - ``uefi.systemd-boot``: systemd-boot for UEFI booting. For the x86_64 architecture, in addition to x64 UEFI, support
     for mixed-mode booting (IA32 UEFI) will also be added.
+  - ``uefi.shim-grub``: shim and GRUB for UEFI booting with Secure Boot. Only for x86_64. It needs the ``-S`` option
+    and the ``secureboot/`` directory.
 * ``arch``: The architecture (e.g. ``x86_64``) to build the image for (defaults to the value returned by ``uname -m``).
   This is also used to resolve the name of the packages file (e.g. ``packages.x86_64``)
 * ``packages``: File path to a text file containing a list of packages to install into the environment in ``iso`` and
@@ -183,6 +186,20 @@ The *custom template identifiers* are understood in all `.cfg` files in this dir
 grub
 ----
 
-This directory is mandatory when the ``uefi.grub`` bootmode is selected in ``profiledef.sh``.
+This directory is mandatory when the ``uefi.grub`` or ``uefi.shim-grub`` bootmode is selected in ``profiledef.sh``.
 It contains configuration files for `GRUB <https://www.gnu.org/software/grub/>`_
 used in the resulting image.
+
+secureboot
+----------
+
+This directory is mandatory when the ``uefi.shim-grub`` bootmode is selected in ``profiledef.sh``.
+It has these files:
+
+* ``shimx64.efi``: shim, signed by Microsoft. The computer starts it first.
+* ``mmx64.efi``: MokManager. It opens the first time, to enroll the key.
+* ``MOK.cer``: the public key. Users enroll it in MokManager.
+* ``grub-sbat.csv``: the SBAT data for our GRUB.
+* ``grub-always-use-shim.patch``: a patch for GRUB 2.14. With it, GRUB also boots when shim validation is off.
+
+GRUB and the kernel are signed with the key from the ``-S`` option. ``MOK.cer`` must be the same key.

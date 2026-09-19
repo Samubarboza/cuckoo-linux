@@ -1,186 +1,74 @@
-=======
-archiso
-=======
-
-The archiso project features scripts and configuration templates to build installation media (*.iso* images and
-*.tar bootstrap images) as well as netboot artifacts for BIOS and UEFI based systems.
-Currently creating the images is only supported on Arch Linux but may work on other operating systems as well.
-
-Requirements
+============
+Cuckoo Linux
 ============
 
-The following packages need to be installed to be able to create an image with the included scripts:
+Cuckoo Linux is a Linux distribution based on Arch Linux.
 
-* arch-install-scripts
-* awk
-* dosfstools
-* e2fsprogs
-* erofs-utils (optional)
-* findutils
-* grub
-* gzip
-* libarchive
-* libisoburn
-* mtools
-* openssl
-* pacman
-* sed
-* squashfs-tools
+**This project is in development.** It is not ready for daily use. Things can change or break.
 
-For running the images in a virtualized test environment the following packages are required:
+Goal
+====
 
-* edk2-ovmf
-* qemu
+- Boot and install on any computer, with Secure Boot on.
+- No need to turn off Secure Boot.
+- A simple and friendly installer.
 
-For linting the shell scripts the following package is required:
+What works now
+==============
 
-* shellcheck
+- The live ISO boots with Secure Boot on or off.
+- It also boots on old computers with BIOS.
 
-For generating the man pages:
+How Secure Boot works
+=====================
 
-* python-docutils
+1. The computer starts ``shim``. Microsoft signed it, so almost all computers trust it.
+2. ``shim`` starts GRUB. GRUB is signed with the Cuckoo key.
+3. GRUB starts the Linux kernel. The kernel is also signed with the Cuckoo key.
 
-Profiles
-========
+The first time, the computer does not know the Cuckoo key:
 
-Archiso comes with two profiles: **baseline** and **releng**. While both can serve as starting points for creating
-custom live media, **releng** is used to create the monthly installation medium.
-They can be found below `configs/baseline/ <configs/baseline/>`_  and `configs/releng/ <configs/releng/>`_
-(respectively). Both profiles are defined by files to be placed into overlays (e.g. airootfs ‎→‎ the image's ``/``).
+1. You see ``Verification failed``. This is normal. Press OK.
+2. A blue screen opens.
+3. Choose ``Enroll key from disk``, then ``MOK.cer``, ``Continue``, ``Yes`` and ``Reboot``.
 
-Read `README.profile.rst <docs/README.profile.rst>`_ to learn more about how to create profiles.
+You do this only one time on each computer.
 
-Create images
+Some new computers do not trust ``shim``. On them, turn on "Allow Microsoft 3rd Party UEFI CA" in the firmware settings.
+
+Build the ISO
 =============
 
-Usually the archiso tools are installed as a package. However, it is also possible to clone this repository and create
-images without installing archiso system-wide.
+You need Arch Linux and these packages: ``arch-install-scripts``, ``libisoburn``, ``squashfs-tools``, ``dosfstools``,
+``mtools``, ``sbsigntools`` and ``openssl``.
 
-When archiso is installed system-wide and the modification of a profile is desired, it is necessary to copy it to a
-writeable location, as ``/usr/share/archiso`` is tracked by the package manager and only writeable by root (changes will
-be lost on update).
+You also need GRUB 2.14 with our patch: ``configs/cuckoo/secureboot/grub-always-use-shim.patch``.
 
-The examples below will assume an unmodified profile in a system location (unless noted otherwise).
+1. Make your own key. Keep ``MOK.key`` secret, never share it.
 
-It is advised to consult the help output of **mkarchiso**:
+   .. code:: sh
 
-.. code:: sh
+      openssl req -new -x509 -newkey rsa:2048 -nodes -keyout MOK.key -out MOK.crt -days 3650 \
+          -subj "/CN=My Secure Boot Key/" -addext "extendedKeyUsage=codeSigning"
+      openssl x509 -in MOK.crt -outform DER -out configs/cuckoo/secureboot/MOK.cer
 
-   mkarchiso -h
+2. Build the ISO. ``-S`` is the folder with ``MOK.key`` and ``MOK.crt``.
 
-Create images with packaged archiso
------------------------------------
+   .. code:: sh
 
-.. code:: sh
+      sudo ./archiso/mkarchiso -v -S /path/to/key/folder -w work -o out configs/cuckoo
 
-   mkarchiso -w path/to/work_dir -o path/to/out_dir path/to/profile
+The ISO is in the ``out`` folder.
 
-Create images with local clone
-------------------------------
+Credits and license
+===================
 
-Clone this repository and run:
+Cuckoo Linux is a modified copy of `archiso <https://gitlab.archlinux.org/archlinux/archiso>`_.
+We added Secure Boot support and the ``cuckoo`` profile.
 
-.. code:: sh
+- ``shimx64.efi`` and ``mmx64.efi`` come from the Fedora 44 package ``shim-x64`` (version 16.1-5), without changes.
+  ``shim`` uses a BSD license.
+- The GRUB patch uses the same license as GRUB: GPL-3.0-or-later.
+- Everything else uses GPL-3.0-or-later, like archiso. See ``LICENSE``.
 
-   ./archiso/mkarchiso -w path/to/work_dir -o path/to/out_dir path/to/profile
-
-Testing
-=======
-
-The convenience script **run_archiso** is provided to boot into the medium using qemu.
-It is advised to consult its help output:
-
-.. code:: sh
-
-   run_archiso -h
-
-Run the following to boot the iso using BIOS:
-
-.. code:: sh
-
-   run_archiso -i path/to/an/arch.iso
-
-Run the following to boot the iso using UEFI:
-
-.. code:: sh
-
-   run_archiso -u -i path/to/an/arch.iso
-
-The script can of course also be executed from this repository:
-
-
-.. code:: sh
-
-   ./scripts/run_archiso.sh -i path/to/an/arch.iso
-
-Installation
-============
-
-To install archiso system-wide use the included ``Makefile``:
-
-.. code:: sh
-
-   make install
-
-Optional features
-
-The iso image contains a GRUB environment block holding the iso name and version. This allows to
-boot the iso image from GRUB with a version specific cow directory to mitigate overlay clashes.
-
-.. code:: sh
-
-   loopback loop archlinux.iso
-   load_env -f (loop)/boot/grub/grubenv
-   linux (loop)/arch/boot/x86_64/vmlinuz-linux ... \
-       cow_directory=${NAME}/${VERSION} ...
-   initrd (loop)/arch/boot/x86_64/initramfs-linux-lts.img
-
-Contribute
-==========
-
-Development of archiso takes place on Arch Linux' Gitlab: https://gitlab.archlinux.org/archlinux/archiso.
-
-Please read our distribution-wide `Code of Conduct <https://terms.archlinux.org/docs/code-of-conduct/>`_ before
-contributing, to understand what actions will and will not be tolerated.
-
-Read our `contributing guide <CONTRIBUTING.rst>`_ to learn more about how to provide fixes or improvements for the code
-base.
-
-Discussion around archiso takes place on the `arch-releng mailing list
-<https://lists.archlinux.org/mailman3/lists/arch-releng.lists.archlinux.org/>`_ and in `#archlinux-releng
-<ircs://irc.libera.chat/archlinux-releng>`_ on `Libera Chat <https://libera.chat/>`_.
-
-All past and present authors of archiso are listed in `AUTHORS <AUTHORS.rst>`_.
-
-Releases
-========
-
-`Releases of archiso <https://gitlab.archlinux.org/archlinux/archiso/-/tags>`_ are created by their current maintainers
-
-- `David Runge <https://gitlab.archlinux.org/dvzrv>`_ (``991F6E3F0765CF6295888586139B09DA5BF0D338``)
-- `nl6720 <https://gitlab.archlinux.org/nl6720>`_ (``BB8E6F1B81CF0BB301D74D1CBF425A01E68B38EF``)
-
-Tags are signed using respective PGP keys.
-
-To verify a tag, first import the relevant PGP key(s):
-
-.. code:: sh
-
-  gpg --auto-key-locate wkd --search-keys dvzrv@archlinux.org
-
-or
-
-.. code:: sh
-
-  gpg --auto-key-locate clear,dane --locate-external-keys devnull@nl6720.me
-
-Afterwards a tag can be verified from a clone of this repository:
-
-.. code:: sh
-
-  git verify-tag <tag>
-
-License
-=======
-
-Archiso is licensed under the terms of the **GPL-3.0-or-later** (see `LICENSE <LICENSE>`_).
+Cuckoo Linux is not an official Arch Linux or Fedora project.

@@ -50,6 +50,8 @@ Options
 -p packages      Package(s) to install.
                  Multiple packages are provided as quoted, space delimited list.
 -r               Delete the working directory at the end.
+-S key_dir       Folder with *MOK.key* and *MOK.crt*. Used to sign the kernel for Secure Boot,
+                 and GRUB for the *uefi.shim-grub* boot mode.
 -v               Enable verbose output.
 -w work_dir      Set the working directory.
                  Default: |work_dir|.
