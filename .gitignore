@@ -14,6 +14,6 @@ user-data
 meta-data
 network-config
 man/version.rst
-local/
+/local/
 !configs/cuckoo/secureboot/MOK.cer
 grub-build/
