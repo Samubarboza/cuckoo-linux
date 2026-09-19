@@ -830,12 +830,13 @@ _make_bootmode_uefi.shim-grub() {
                  search_fs_file search_fs_uuid search_label serial sleep terminal test tpm udf usb usbserial_common \
                  usbserial_ftdi usbserial_pl2303 usbserial_usbdebug video xfs zstd)
 
-    # Build GRUB without --disable-shim-lock, so it asks shim to verify the kernel
+    # Build GRUB without --disable-shim-lock, so it asks shim to verify the kernel.
+    # GRUB must include secureboot/grub-always-use-shim.patch, and grub-sbat.csv marks it as changed by Cuckoo.
     grub-mkstandalone -O x86_64-efi \
         --modules="${grubmodules[*]}" \
         --locales="en@quot" \
         --themes="" \
-        --sbat=/usr/share/grub/sbat.csv \
+        --sbat="${profile}/secureboot/grub-sbat.csv" \
         -o "${work_dir}/grubx64.efi" "boot/grub/grub.cfg=${work_dir}/grub-embed.cfg"
 
     # shim is the default boot file and loads grubx64.efi and mmx64.efi from the same folder.
@@ -1190,7 +1191,7 @@ _validate_requirements_bootmode_uefi.shim-grub() {
         _msg_error "Validating '${bootmode}': file '${profile}/grub/grub.cfg' not found!" 0
     fi
 
-    for secureboot_file in shimx64.efi mmx64.efi MOK.cer; do
+    for secureboot_file in shimx64.efi mmx64.efi MOK.cer grub-sbat.csv; do
         if [[ ! -f "${profile}/secureboot/${secureboot_file}" ]]; then
             (( validation_error=validation_error+1 ))
             _msg_error "Validating '${bootmode}': file '${profile}/secureboot/${secureboot_file}' not found!" 0

@@ -1,0 +1,31 @@
+Keep using shim when the user turned off shim validation (MokSBState).
+Without this, GRUB loads the kernel with the firmware, which rejects keys that are only in MOK.
+
+--- a/grub-core/kern/efi/sb.c
++++ b/grub-core/kern/efi/sb.c
+@@ -82,9 +82,9 @@
+     }
+ 
+   /*
+-   * See if a user has put the shim into insecure mode. If so, and if the
+-   * variable doesn't have the runtime attribute set, we might as well
+-   * honor that.
++   * Cuckoo: do not honor the shim insecure mode here. The firmware still
++   * checks images when GRUB loads them without shim, so keep using shim,
++   * which allows every image by itself when it is in insecure mode.
+    */
+   status = grub_efi_get_variable_with_attributes ("MokSBState", &shim_lock_guid,
+ 						  &size, (void **) &moksbstate, &attr);
+@@ -96,12 +96,6 @@
+       goto out;
+     }
+ 
+-  if (!(attr & GRUB_EFI_VARIABLE_RUNTIME_ACCESS) && *moksbstate == 1)
+-    {
+-      secureboot = GRUB_EFI_SECUREBOOT_MODE_DISABLED;
+-      goto out;
+-    }
+-
+   secureboot = GRUB_EFI_SECUREBOOT_MODE_ENABLED;
+ 
+  out:
