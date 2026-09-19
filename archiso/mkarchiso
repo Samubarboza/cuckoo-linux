@@ -1165,7 +1165,7 @@ _validate_requirements_bootmode_uefi.grub() {
 }
 
 _validate_requirements_bootmode_uefi.shim-grub() {
-    local secureboot_file
+    local secureboot_file grub_patch_mark
 
     _validate_common_requirements_bootmode_uefi
 
@@ -1181,22 +1181,30 @@ _validate_requirements_bootmode_uefi.shim-grub() {
         _msg_error "Validating '${bootmode}': cannot be used with the 'uefi.systemd-boot' or 'uefi.grub' boot modes!" 0
     fi
 
-    if ! command -v grub-mkstandalone &>/dev/null; then
-        (( validation_error=validation_error+1 ))
-        _msg_error "Validating '${bootmode}': grub-mkstandalone is not available on this host. Install 'grub'!" 0
-    fi
-
     if [[ ! -f "${profile}/grub/grub.cfg" ]]; then
         (( validation_error=validation_error+1 ))
         _msg_error "Validating '${bootmode}': file '${profile}/grub/grub.cfg' not found!" 0
     fi
 
-    for secureboot_file in shimx64.efi mmx64.efi MOK.cer grub-sbat.csv; do
+    for secureboot_file in shimx64.efi mmx64.efi MOK.cer grub-sbat.csv grub-always-use-shim.patch; do
         if [[ ! -f "${profile}/secureboot/${secureboot_file}" ]]; then
             (( validation_error=validation_error+1 ))
             _msg_error "Validating '${bootmode}': file '${profile}/secureboot/${secureboot_file}' not found!" 0
         fi
     done
+
+    # GRUB must be built by scripts/build_grub.sh with the current patch, the normal Arch GRUB does not work
+    if ! command -v grub-mkstandalone &>/dev/null; then
+        (( validation_error=validation_error+1 ))
+        _msg_error "Validating '${bootmode}': grub-mkstandalone was not found. Run scripts/build_grub.sh and add grub-build/bin to PATH!" 0
+    else
+        grub_patch_mark="$(dirname -- "$(command -v grub-mkstandalone)")/../share/grub/cuckoo-grub-patch.sha256"
+        if [[ ! -f "${grub_patch_mark}" ]] \
+            || [[ "$(<"${grub_patch_mark}")" != "$(sha256sum <"${profile}/secureboot/grub-always-use-shim.patch" 2>/dev/null)" ]]; then
+            (( validation_error=validation_error+1 ))
+            _msg_error "Validating '${bootmode}': this GRUB does not have the current Cuckoo patch. Run scripts/build_grub.sh!" 0
+        fi
+    fi
 
     # GRUB and the kernel must be signed, otherwise shim refuses to boot them
     if [[ -z "${secureboot_key_dir}" ]]; then

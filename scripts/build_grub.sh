@@ -42,6 +42,9 @@ make --quiet -j"$(nproc)"
 rm -rf -- "${grub_build_dir}"
 make --quiet install >/dev/null
 
+# mkarchiso reads this mark to know that GRUB has the current patch
+sha256sum <"${grub_patch_file}" >"${grub_build_dir}/share/grub/cuckoo-grub-patch.sha256"
+
 # The menu font is not built here, so take it from the Arch grub package when it exists
 if [[ -f "${system_grub_font}" ]]; then
     install -m 0644 -- "${system_grub_font}" "${grub_build_dir}/share/grub/"
