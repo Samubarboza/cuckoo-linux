@@ -121,7 +121,7 @@ usage: ${app_name} [options] <profile_dir>
      -p [package ..]  Package(s) to install.
                       Multiple packages are provided as quoted, space delimited list.
      -r               Delete the working directory at the end.
-     -S <key_dir>     Sign the kernel for Secure Boot with MOK.key and MOK.crt from this directory
+     -S <key_dir>     Sign the kernel (and GRUB for uefi.shim-grub) for Secure Boot with MOK.key and MOK.crt from this directory
      -v               Enable verbose output
      -w <work_dir>    Set the working directory
                       Default: '${work_dir}'
@@ -813,32 +813,42 @@ _make_bootmode_uefi-x64.grub.eltorito() {
     return 1
 }
 
-# Prepare shim and the signed Fedora GRUB for UEFI booting with Secure Boot
+# Prepare shim and GRUB signed with the Cuckoo key for UEFI booting with Secure Boot
 _make_bootmode_uefi.shim-grub() {
-    local files_to_copy=()
+    local grubmodules=() files_to_copy=() sign_output
 
     _msg_info "Setting up shim and GRUB for UEFI booting with Secure Boot..."
 
     # Prepare configuration files
     _run_once _make_common_bootmode_grub_cfg
 
-    # shim is the default boot file and loads grubx64.efi and mmx64.efi from the same folder
+    # Same modules as uefi.grub, plus play, probe, terminal and test used by the menus.
+    # With Secure Boot GRUB can not load modules later, so all of them must be inside the binary.
+    grubmodules=(all_video at_keyboard boot btrfs cat chain configfile echo efifwsetup efinet exfat ext2 f2fs fat font \
+                 gfxmenu gfxterm gzio halt hfsplus iso9660 jpeg keylayouts linux loadenv loopback lsefi lsefimmap \
+                 minicmd normal ntfs ntfscomp part_apple part_gpt part_msdos play png probe read reboot regexp search \
+                 search_fs_file search_fs_uuid search_label serial sleep terminal test tpm udf usb usbserial_common \
+                 usbserial_ftdi usbserial_pl2303 usbserial_usbdebug video xfs zstd)
+
+    # Build GRUB without --disable-shim-lock, so it asks shim to verify the kernel
+    grub-mkstandalone -O x86_64-efi \
+        --modules="${grubmodules[*]}" \
+        --locales="en@quot" \
+        --themes="" \
+        --sbat=/usr/share/grub/sbat.csv \
+        -o "${work_dir}/grubx64.efi" "boot/grub/grub.cfg=${work_dir}/grub-embed.cfg"
+
+    # shim is the default boot file and loads grubx64.efi and mmx64.efi from the same folder.
+    # On the first boot shim does not trust GRUB yet, so it opens mmx64.efi to enroll MOK.cer.
     install -d -m 0755 -- "${isofs_dir}/EFI/BOOT"
     install -m 0644 -- "${profile}/secureboot/shimx64.efi" "${isofs_dir}/EFI/BOOT/BOOTX64.EFI"
-    install -m 0644 -- "${profile}/secureboot/grubx64.efi" "${profile}/secureboot/mmx64.efi" "${isofs_dir}/EFI/BOOT/"
+    install -m 0644 -- "${profile}/secureboot/mmx64.efi" "${isofs_dir}/EFI/BOOT/"
+    if ! sign_output="$(sbsign --key "${secureboot_key_dir}/MOK.key" --cert "${secureboot_key_dir}/MOK.crt" \
+        --output "${isofs_dir}/EFI/BOOT/grubx64.efi" "${work_dir}/grubx64.efi" 2>&1)"; then
+        _msg_error "Could not sign GRUB: ${sign_output}" 1
+    fi
     # Public key that users enroll in MokManager on the first boot
     install -m 0644 -- "${profile}/secureboot/MOK.cer" "${isofs_dir}/"
-
-    # Fedora GRUB reads grub.cfg from its own folder, or from /EFI/fedora if that fails.
-    # It finds the ISO volume by its unique file and loads the menu from there.
-    printf '%s\n' \
-        "if search --no-floppy --set=root --file '${search_filename}'; then" \
-        "    configfile /boot/grub/grub.cfg" \
-        "else" \
-        "    echo 'Could not find the ISO volume!'" \
-        "fi" >"${isofs_dir}/EFI/BOOT/grub.cfg"
-    install -d -m 0755 -- "${isofs_dir}/EFI/fedora"
-    install -m 0644 -- "${isofs_dir}/EFI/BOOT/grub.cfg" "${isofs_dir}/EFI/fedora/"
 
     # Copy the GRUB menu files
     files_to_copy+=("${work_dir}/grub/"*)
@@ -1158,7 +1168,7 @@ _validate_requirements_bootmode_uefi.shim-grub() {
 
     _validate_common_requirements_bootmode_uefi
 
-    # shimx64.efi and grubx64.efi only exist for x86_64
+    # shimx64.efi only exists for x86_64
     if [[ "$arch" != 'x86_64' ]]; then
         (( validation_error=validation_error+1 ))
         _msg_error "Validating '${bootmode}': only the 'x86_64' architecture is supported!" 0
@@ -1170,22 +1180,27 @@ _validate_requirements_bootmode_uefi.shim-grub() {
         _msg_error "Validating '${bootmode}': cannot be used with the 'uefi.systemd-boot' or 'uefi.grub' boot modes!" 0
     fi
 
+    if ! command -v grub-mkstandalone &>/dev/null; then
+        (( validation_error=validation_error+1 ))
+        _msg_error "Validating '${bootmode}': grub-mkstandalone is not available on this host. Install 'grub'!" 0
+    fi
+
     if [[ ! -f "${profile}/grub/grub.cfg" ]]; then
         (( validation_error=validation_error+1 ))
         _msg_error "Validating '${bootmode}': file '${profile}/grub/grub.cfg' not found!" 0
     fi
 
-    for secureboot_file in shimx64.efi grubx64.efi mmx64.efi MOK.cer; do
+    for secureboot_file in shimx64.efi mmx64.efi MOK.cer; do
         if [[ ! -f "${profile}/secureboot/${secureboot_file}" ]]; then
             (( validation_error=validation_error+1 ))
             _msg_error "Validating '${bootmode}': file '${profile}/secureboot/${secureboot_file}' not found!" 0
         fi
     done
 
-    # Without a signed kernel shim will refuse to boot it
+    # GRUB and the kernel must be signed, otherwise shim refuses to boot them
     if [[ -z "${secureboot_key_dir}" ]]; then
         (( validation_error=validation_error+1 ))
-        _msg_error "Validating '${bootmode}': use the -S option to give the key folder for signing the kernel!" 0
+        _msg_error "Validating '${bootmode}': use the -S option to give the key folder for signing GRUB and the kernel!" 0
     fi
 }
 
