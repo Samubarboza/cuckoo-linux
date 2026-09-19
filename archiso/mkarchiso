@@ -44,6 +44,7 @@ airootfs_image_type=""
 airootfs_image_tool_options=()
 bootstrap_tarball_compression=()
 cert_list=()
+secureboot_key_dir=""
 declare -A file_permissions=()
 efibootimg=""
 efiboot_files=()
@@ -120,6 +121,7 @@ usage: ${app_name} [options] <profile_dir>
      -p [package ..]  Package(s) to install.
                       Multiple packages are provided as quoted, space delimited list.
      -r               Delete the working directory at the end.
+     -S <key_dir>     Sign the kernel for Secure Boot with MOK.key and MOK.crt from this directory
      -v               Enable verbose output
      -w <work_dir>    Set the working directory
                       Default: '${work_dir}'
@@ -145,6 +147,7 @@ _show_config() {
     _msg_info "                  GPG key:   ${gpg_key:-None}"
     _msg_info "               GPG signer:   ${gpg_sender:-None}"
     _msg_info "Code signing certificates:   ${cert_list[*]:-None}"
+    _msg_info "   Secure Boot key folder:   ${secureboot_key_dir:-None}"
     _msg_info "                  Profile:   ${profile}"
     _msg_info "Pacman configuration file:   ${pacman_conf}"
     _msg_info "          Image file name:   ${image_name:-None}"
@@ -448,6 +451,23 @@ _copy_boot_out_of_pacstrap_dir() {
     _msg_info "Copying /boot out of the airootfs..."
     _unshare cp -aT -- "${pacstrap_dir}/boot" "${boot_dir}"
     _msg_info "Done!"
+}
+
+# Sign the kernel so shim can verify it when Secure Boot is enabled
+_sign_kernel_for_secure_boot() {
+    local kernel_file sign_output
+    _msg_info "Signing the kernel for Secure Boot..."
+    for kernel_file in "${boot_dir}/vmlinuz-"*; do
+        if ! sign_output="$(_unshare sbsign --key "${secureboot_key_dir}/MOK.key" --cert "${secureboot_key_dir}/MOK.crt" \
+            --output "${kernel_file}.signed" "${kernel_file}" 2>&1)"; then
+            _msg_error "Could not sign '${kernel_file##*/}': ${sign_output}" 1
+        fi
+        _unshare mv -f -- "${kernel_file}.signed" "${kernel_file}"
+        if ! sbverify --cert "${secureboot_key_dir}/MOK.crt" "${kernel_file}" &>/dev/null; then
+            _msg_error "The signature of '${kernel_file##*/}' is not valid." 1
+        fi
+    done
+    _msg_info "Done! Kernel signed."
 }
 
 # Copy kernel and initramfs to ISO 9660
@@ -1572,6 +1592,40 @@ _read_profile() {
 }
 
 # Validate set options
+# Check that the Secure Boot key is complete and matches the public key in the profile
+_validate_secure_boot_key() {
+    local tool cert_public_key key_public_key
+
+    for tool in sbsign sbverify openssl; do
+        if ! command -v "${tool}" &>/dev/null; then
+            (( validation_error=validation_error+1 ))
+            _msg_error "'${tool}' was not found. Install 'sbsigntools' and 'openssl'." 0
+            return
+        fi
+    done
+
+    if [[ ! -r "${secureboot_key_dir}/MOK.key" || ! -r "${secureboot_key_dir}/MOK.crt" ]]; then
+        (( validation_error=validation_error+1 ))
+        _msg_error "'MOK.key' and 'MOK.crt' were not found in '${secureboot_key_dir}'." 0
+        return
+    fi
+
+    cert_public_key="$(openssl x509 -in "${secureboot_key_dir}/MOK.crt" -noout -pubkey 2>/dev/null)" || true
+    key_public_key="$(openssl pkey -in "${secureboot_key_dir}/MOK.key" -pubout 2>/dev/null)" || true
+    if [[ -z "${cert_public_key}" || "${key_public_key}" != "${cert_public_key}" ]]; then
+        (( validation_error=validation_error+1 ))
+        _msg_error "'MOK.key' and 'MOK.crt' in '${secureboot_key_dir}' are not from the same key." 0
+        return
+    fi
+
+    # The profile ships MOK.cer for users to enroll, so it must be the same key
+    if [[ -e "${profile}/secureboot/MOK.cer" ]] \
+        && [[ "$(openssl x509 -inform DER -in "${profile}/secureboot/MOK.cer" -noout -pubkey 2>/dev/null)" != "${cert_public_key}" ]]; then
+        (( validation_error=validation_error+1 ))
+        _msg_error "The key in '${secureboot_key_dir}' does not match '${profile}/secureboot/MOK.cer'." 0
+    fi
+}
+
 _validate_options() {
     local validation_error=0 _buildmode certfile
 
@@ -1590,6 +1644,8 @@ _validate_options() {
             _msg_error "Code signing certificate '${certfile}' does not exist." 0
         fi
     done
+
+    [[ -z "${secureboot_key_dir}" ]] || _validate_secure_boot_key
 
     # Check if the specified buildmodes are supported
     for _buildmode in "${buildmodes[@]}"; do
@@ -1661,6 +1717,7 @@ _set_overrides() {
     [[ ! -v override_gpg_key ]] || gpg_key="$override_gpg_key"
     [[ ! -v override_gpg_sender ]] || gpg_sender="$override_gpg_sender"
     [[ ! -v override_cert_list ]] || mapfile -t cert_list < <(realpath -- "${override_cert_list[@]}")
+    [[ ! -v override_secureboot_key_dir ]] || secureboot_key_dir="$(realpath -m -- "${override_secureboot_key_dir}")"
     if [[ -v override_quiet ]]; then
         quiet="$override_quiet"
     elif [[ -z "$quiet" ]]; then
@@ -1790,6 +1847,7 @@ _build_iso_base() {
     fi
     _run_once _make_customize_airootfs
     _run_once _copy_boot_out_of_pacstrap_dir
+    [[ -z "${secureboot_key_dir}" ]] || _run_once _sign_kernel_for_secure_boot
     _run_once _make_pkglist
     if [[ "$arch" == @('x86_64'|'i686'|'i486'|'pentium4') ]]; then
         _run_once _check_if_initramfs_has_ucode
@@ -1895,7 +1953,7 @@ else
     }
 fi
 
-while getopts 'c:p:C:L:P:A:D:w:m:o:g:G:vrh?' arg; do
+while getopts 'c:p:C:L:P:A:D:w:m:o:g:G:S:vrh?' arg; do
     case "${arg}" in
         p) read -r -a override_pkg_list <<<"${OPTARG}" ;;
         C) override_pacman_conf="${OPTARG}" ;;
@@ -1911,6 +1969,7 @@ while getopts 'c:p:C:L:P:A:D:w:m:o:g:G:vrh?' arg; do
         G) override_gpg_sender="${OPTARG}" ;;
         v) override_quiet="n" ;;
         r) declare -i override_rm_work_dir=1 ;;
+        S) override_secureboot_key_dir="${OPTARG}" ;;
         h|?) _usage 0 ;;
         *)
             _msg_error "Invalid argument '${arg}'" 0

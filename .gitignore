@@ -15,3 +15,4 @@ meta-data
 network-config
 man/version.rst
 local/
+!configs/cuckoo/secureboot/MOK.cer
