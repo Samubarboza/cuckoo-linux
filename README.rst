@@ -40,9 +40,7 @@ Build the ISO
 =============
 
 You need Arch Linux and these packages: ``arch-install-scripts``, ``libisoburn``, ``squashfs-tools``, ``dosfstools``,
-``mtools``, ``sbsigntools`` and ``openssl``.
-
-You also need GRUB 2.14 with our patch: ``configs/cuckoo/secureboot/grub-always-use-shim.patch``.
+``mtools``, ``sbsigntools``, ``openssl``, ``base-devel`` and ``python``.
 
 1. Make your own key. Keep ``MOK.key`` secret, never share it.
 
@@ -52,11 +50,17 @@ You also need GRUB 2.14 with our patch: ``configs/cuckoo/secureboot/grub-always-
           -subj "/CN=My Secure Boot Key/" -addext "extendedKeyUsage=codeSigning"
       openssl x509 -in MOK.crt -outform DER -out configs/cuckoo/secureboot/MOK.cer
 
-2. Build the ISO. ``-S`` is the folder with ``MOK.key`` and ``MOK.crt``.
+2. Build our GRUB. You do this only one time. It goes to the ``grub-build`` folder.
 
    .. code:: sh
 
-      sudo ./archiso/mkarchiso -v -S /path/to/key/folder -w work -o out configs/cuckoo
+      ./scripts/build_grub.sh
+
+3. Build the ISO. ``-S`` is the folder with ``MOK.key`` and ``MOK.crt``.
+
+   .. code:: sh
+
+      sudo env PATH="$PWD/grub-build/bin:$PATH" ./archiso/mkarchiso -v -S /path/to/key/folder -w work -o out configs/cuckoo
 
 The ISO is in the ``out`` folder.
 
