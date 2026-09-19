@@ -1699,7 +1699,6 @@ _read_profile() {
     fi
 }
 
-# Validate set options
 # Check that the Secure Boot key is complete and matches the public key in the profile
 _validate_secure_boot_key() {
     local tool cert_public_key key_public_key
@@ -1734,6 +1733,7 @@ _validate_secure_boot_key() {
     fi
 }
 
+# Validate set options
 _validate_options() {
     local validation_error=0 _buildmode certfile
 

@@ -8,7 +8,7 @@ MAN_DIR?=$(DESTDIR)$(PREFIX)/share/man
 PROFILE_DIR=$(DESTDIR)$(PREFIX)/share/archiso
 
 DOC_FILES=$(wildcard docs/*) $(wildcard *.rst)
-SCRIPT_FILES=$(wildcard archiso/*) $(wildcard scripts/*.sh) $(wildcard .gitlab/ci/*.sh) \
+SCRIPT_FILES=$(wildcard archiso/*) $(wildcard scripts/*.sh) \
              $(wildcard configs/*/profiledef.sh) $(wildcard configs/*/airootfs/usr/local/bin/*)
 VERSION?=$(shell git describe --long --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g;s/\.r0\.g.*//')
 
