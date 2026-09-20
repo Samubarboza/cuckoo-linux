@@ -18,8 +18,12 @@ btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
 total_steps=5
 steps_done=0
+packages_total=0
 
+# The same list installs the system and counts the packages for the progress bar
 base_packages=(
+    base linux linux-firmware mkinitcpio
+    grub efibootmgr
     intel-ucode amd-ucode
     btrfs-progs
     networkmanager
@@ -43,11 +47,39 @@ format_elapsed_time() {
     fi
 }
 
+# Ask pacman how many packages this install needs. It downloads nothing, only asks.
+# A total that does not come out leaves the bar as it was, the install goes on.
+count_target_packages() {
+    local counted=0
+    if pacman -Sy &>/dev/null; then
+        counted="$(pacman -Sp --print-format '%n' -- "${base_packages[@]}" 2>/dev/null | sort -u | wc -l)"
+    fi
+    if (( counted < 30 || counted > 2000 )); then
+        counted=0
+    fi
+    printf '%s' "${counted}"
+}
+
+# How far the base system got, from 0 to 100. Each installed package leaves
+# a folder on the disk, so counting them is enough and it never goes back.
+base_system_percent() {
+    local installed
+    if (( packages_total == 0 )); then
+        printf '0'
+        return 0
+    fi
+    installed="$(ls -1 -- "${target_dir}/var/lib/pacman/local" 2>/dev/null | wc -l)"
+    if (( installed > packages_total )); then
+        installed="${packages_total}"
+    fi
+    printf '%s' "$(( installed * 100 / packages_total ))"
+}
+
 # Draw the whole screen again from the top, without clearing it first.
 # Each line erases what was there, so the logo stays still and nothing blinks.
 draw_screen() {
-    local title="$1" elapsed="$2" last_line="$3" progress_bar='' block filled_blocks
-    filled_blocks=$(( steps_done * bar_width / total_steps ))
+    local title="$1" elapsed="$2" last_line="$3" percent="$4" progress_bar='' block filled_blocks
+    filled_blocks=$(( percent * bar_width / 100 ))
     for (( block = 0; block < bar_width; block++ )); do
         if (( block < filled_blocks )); then progress_bar+='█'; else progress_bar+='░'; fi
     done
@@ -55,7 +87,7 @@ draw_screen() {
     printf '\033[H'
     [[ -n "${logo}" ]] && printf '%s\n\n' "${logo}"
     printf 'Installing on %s\033[K\n\n' "${disk}"
-    printf '[%s]  %s%%\033[K\n\n' "${progress_bar}" "$(( steps_done * 100 / total_steps ))"
+    printf '[%s]  %s%%\033[K\n\n' "${progress_bar}" "${percent}"
     printf '%-40s %s\033[K\n' "${title}" "$(format_elapsed_time "${elapsed}")"
     printf '%s\033[K\033[J' "${last_line}"
 }
@@ -63,12 +95,14 @@ draw_screen() {
 # Run a long command and keep the screen moving: the progress bar, the time it takes
 # and the last line of its output. The whole output stays in the log.
 run_step() {
-    local may_fail=0
-    if [[ "$1" == '--may-fail' ]]; then
-        may_fail=1
-        shift
-    fi
-    local title="$1" start_time="${SECONDS}" last_line step_pid
+    local may_fail=0 progress_command=''
+    while [[ "$1" == --* ]]; do
+        case "$1" in
+            --may-fail) may_fail=1; shift ;;
+            --progress) progress_command="$2"; shift 2 ;;
+        esac
+    done
+    local title="$1" start_time="${SECONDS}" last_line step_percent step_pid
     shift
 
     "$@" >>"${log_file}" 2>&1 </dev/null &
@@ -77,7 +111,12 @@ run_step() {
     while kill -0 "${step_pid}" 2>/dev/null; do
         last_line="$(tail -1 -- "${log_file}" 2>/dev/null \
             | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' | tr -d '\r' | cut -c1-60)"
-        draw_screen "${title}" "$(( SECONDS - start_time ))" "${last_line}"
+        step_percent=0
+        if [[ -n "${progress_command}" ]]; then
+            step_percent="$("${progress_command}")"
+        fi
+        draw_screen "${title}" "$(( SECONDS - start_time ))" "${last_line}" \
+            "$(( (steps_done * 100 + step_percent) / total_steps ))"
         sleep 0.3
     done
 
@@ -86,7 +125,7 @@ run_step() {
         fail "${title} failed."
     fi
     steps_done=$(( steps_done + 1 ))
-    draw_screen "${title}" "$(( SECONDS - start_time ))" ''
+    draw_screen "${title}" "$(( SECONDS - start_time ))" '' "$(( steps_done * 100 / total_steps ))"
 }
 
 read_answer() {
@@ -203,8 +242,9 @@ find_partitions
 run_step 'Formatting the disk' format_disk
 run_step 'Mounting the disk' mount_disk
 write_archinstall_files
+packages_total="$(count_target_packages)"
 # setsid leaves archinstall without a terminal, so it writes in the log and not on our screen
-run_step 'Installing the base system' \
+run_step --progress base_system_percent 'Installing the base system' \
     setsid --wait archinstall --silent --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
 
 install_hardware_drivers() {
