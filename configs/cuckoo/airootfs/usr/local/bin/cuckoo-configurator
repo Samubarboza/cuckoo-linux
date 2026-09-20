@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Ask the few questions needed to install Cuckoo Linux.
+# It only writes the answers, it never touches a disk.
+
+set -e -u
+
+answers_dir="${CUCKOO_ANSWERS_DIR:-/tmp/cuckoo}"
+logo_file="/usr/local/share/cuckoo/logo.txt"
+screen_width=70
+
+cancel_install() {
+    printf '\nInstall cancelled. Nothing was changed.\n'
+    exit 1
+}
+
+show_title() {
+    # Clear the screen without needing a terminal database
+    printf '\033[2J\033[H'
+    if [[ -f "${logo_file}" ]]; then
+        gum style --foreground 2 --align center --width "${screen_width}" "$(<"${logo_file}")"
+    fi
+    gum style --align center --width "${screen_width}" --foreground 8 "Arch Linux for developers"
+    printf '\n'
+}
+
+ask_keyboard() {
+    local answer
+    show_title
+    answer="$(gum choose --header 'Keyboard and language' 'English (US)' 'Spanish (Latin America)')" || cancel_install
+    if [[ "${answer}" == 'English (US)' ]]; then
+        printf 'us\n' >"${answers_dir}/keymap"
+        printf 'en_US.UTF-8\n' >"${answers_dir}/locale"
+    else
+        printf 'la-latin1\n' >"${answers_dir}/keymap"
+        printf 'es_AR.UTF-8\n' >"${answers_dir}/locale"
+    fi
+}
+
+# The disk the live system booted from, so it is never offered as a target
+boot_disk_path() {
+    local boot_source boot_disk
+    boot_source="$(findmnt --noheadings --output SOURCE /run/archiso/bootmnt 2>/dev/null)" || return 0
+    [[ -n "${boot_source}" ]] || return 0
+    boot_disk="$(lsblk --noheadings --output PKNAME "${boot_source}" 2>/dev/null | head -1)"
+    [[ -n "${boot_disk}" ]] && printf '/dev/%s\n' "${boot_disk}"
+}
+
+ask_disk() {
+    local disk_list boot_disk chosen_line chosen_disk typed_word
+    disk_list="$(lsblk --nodeps --noheadings --output PATH,SIZE,MODEL --exclude 7,11)"
+    boot_disk="$(boot_disk_path)"
+    if [[ -n "${boot_disk}" ]]; then
+        disk_list="$(printf '%s\n' "${disk_list}" | grep -v "^${boot_disk} " || true)"
+    fi
+    if [[ -z "${disk_list}" ]]; then
+        printf 'ERROR: no disk was found on this computer.\n' >&2
+        exit 1
+    fi
+
+    show_title
+    chosen_line="$(printf '%s\n' "${disk_list}" | gum choose --header 'Where do you want to install Cuckoo?')" \
+        || cancel_install
+    chosen_disk="${chosen_line%% *}"
+
+    show_title
+    gum style --foreground 1 "This erases everything on ${chosen_disk}."
+    typed_word="$(gum input --placeholder 'Type ERASE to continue')" || cancel_install
+    [[ "${typed_word}" == 'ERASE' ]] || cancel_install
+
+    printf '%s\n' "${chosen_disk}" >"${answers_dir}/disk"
+}
+
+ask_user() {
+    local user_name first_password second_password
+    while true; do
+        show_title
+        user_name="$(gum input --placeholder 'Your name, in small letters')" || cancel_install
+        if [[ "${user_name}" =~ ^[a-z][a-z0-9_-]{0,30}$ ]]; then
+            break
+        fi
+        gum style --foreground 1 'Use only small letters, numbers, - and _. Start with a letter.'
+        sleep 2
+    done
+
+    while true; do
+        show_title
+        first_password="$(gum input --password --placeholder 'Password')" || cancel_install
+        second_password="$(gum input --password --placeholder 'Repeat the password')" || cancel_install
+        if [[ -z "${first_password}" ]]; then
+            gum style --foreground 1 'The password can not be empty.'
+        elif [[ "${first_password}" != "${second_password}" ]]; then
+            gum style --foreground 1 'The passwords are not the same.'
+        else
+            break
+        fi
+        sleep 2
+    done
+
+    printf '%s\n' "${user_name}" >"${answers_dir}/username"
+    printf '%s\n' "${first_password}" >"${answers_dir}/password"
+    chmod 600 -- "${answers_dir}/password"
+}
+
+if ! command -v gum &>/dev/null; then
+    printf 'ERROR: gum was not found.\n' >&2
+    exit 1
+fi
+
+install -d -m 0700 -- "${answers_dir}"
+
+show_title
+gum style --align center --width "${screen_width}" 'Press enter to start'
+read -r
+
+ask_keyboard
+ask_disk
+ask_user
+
+show_title
+gum style --align center --width "${screen_width}" 'All set! Run cuckoo-install to install Cuckoo Linux.'
