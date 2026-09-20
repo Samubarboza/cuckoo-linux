@@ -8,9 +8,11 @@ arch=('any')
 url="https://github.com/Samubarboza/cuckoo-linux"
 license=('GPL-3.0-or-later')
 
-# The files go to /etc/skel, the folder every new user starts with
+# config goes to /etc/skel, the folder every new user starts with.
+# system goes to the root of the disk.
 package() {
     install -d -m 0755 -- "${pkgdir}/etc/skel/.config"
     cp -r --no-preserve=ownership -- "${startdir}/config/." "${pkgdir}/etc/skel/.config/"
-    chmod -R u=rwX,go=rX -- "${pkgdir}/etc/skel/.config"
+    cp -r --no-preserve=ownership -- "${startdir}/system/." "${pkgdir}/"
+    chmod -R u=rwX,go=rX -- "${pkgdir}/etc"
 }

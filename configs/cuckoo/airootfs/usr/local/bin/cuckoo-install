@@ -258,6 +258,8 @@ install_desktop_package() {
     # archinstall already made the user, so /etc/skel reached it too late
     arch-chroot "${target_dir}" cp -r --no-target-directory /etc/skel "/home/${username}" || return 1
     arch-chroot "${target_dir}" chown -R "${username}:" "/home/${username}" || return 1
+    # Only now, so a broken desktop leaves the plain console login working
+    arch-chroot "${target_dir}" systemctl enable greetd.service || return 1
 }
 
 # The desktop is not needed to boot, so a failure only warns
