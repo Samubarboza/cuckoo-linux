@@ -1755,6 +1755,13 @@ _validate_options() {
 
     [[ -z "${secureboot_key_dir}" ]] || _validate_secure_boot_key
 
+    # The Cuckoo installer needs the desktop package inside the ISO
+    if [[ -e "${profile}/airootfs/usr/local/bin/cuckoo-install" ]] \
+        && ! compgen -G "${profile}/airootfs/usr/local/share/cuckoo/packages/*.pkg.tar.zst" &>/dev/null; then
+        (( validation_error=validation_error+1 ))
+        _msg_error "The cuckoo-desktop package was not found. Run scripts/build_desktop.sh!" 0
+    fi
+
     # Check if the specified buildmodes are supported
     for _buildmode in "${buildmodes[@]}"; do
         if typeset -f "_build_buildmode_${_buildmode}" &>/dev/null; then

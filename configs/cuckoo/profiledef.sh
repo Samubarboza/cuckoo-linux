@@ -23,6 +23,7 @@ file_permissions=(
   ["/usr/local/bin/cuckoo-hardware"]="0:0:755"
   ["/usr/local/bin/cuckoo-install"]="0:0:755"
   ["/usr/local/share/cuckoo/hardware/"]="0:0:755"
+  ["/usr/local/share/cuckoo/packages/"]="0:0:755"
   ["/usr/local/bin/Installation_guide"]="0:0:755"
   ["/usr/local/bin/livecd-sound"]="0:0:755"
 )

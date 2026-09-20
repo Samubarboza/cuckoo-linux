@@ -1,0 +1,16 @@
+# Maintainer: Samubarboza <samubjunior95@gmail.com>
+
+pkgname=cuckoo-desktop
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Desktop settings for Cuckoo Linux"
+arch=('any')
+url="https://github.com/Samubarboza/cuckoo-linux"
+license=('GPL-3.0-or-later')
+
+# The files go to /etc/skel, the folder every new user starts with
+package() {
+    install -d -m 0755 -- "${pkgdir}/etc/skel/.config"
+    cp -r --no-preserve=ownership -- "${startdir}/config/." "${pkgdir}/etc/skel/.config/"
+    chmod -R u=rwX,go=rX -- "${pkgdir}/etc/skel/.config"
+}
