@@ -2,13 +2,13 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Build the cuckoo-desktop package into the desktop-build folder of the project.
+# Build the cuckoo-desktop package and leave it inside the cuckoo profile.
 
 set -e -u
 
 project_dir="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")/..")"
 desktop_dir="${project_dir}/desktop"
-output_dir="${project_dir}/desktop-build"
+output_dir="${project_dir}/configs/cuckoo/airootfs/usr/local/share/cuckoo/packages"
 build_user="nobody"
 
 temporary_dir="$(mktemp -d)"
