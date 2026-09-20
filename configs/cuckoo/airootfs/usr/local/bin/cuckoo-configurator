@@ -87,6 +87,31 @@ ask_wifi() {
     done
 }
 
+# The timezone comes from the internet, and the person can change it
+ask_timezone() {
+    local detected='' service chosen
+    for service in 'https://ipinfo.io/timezone' 'http://ip-api.com/line/?fields=timezone'; do
+        detected="$(curl --fail --silent --max-time 5 "${service}" 2>/dev/null | head -1)"
+        [[ -n "${detected}" && -f "/usr/share/zoneinfo/${detected}" ]] && break
+        detected=''
+    done
+
+    show_title
+    if [[ -n "${detected}" ]]; then
+        gum style "Your timezone looks like ${detected}."
+        if gum confirm 'Is this right?' --affirmative 'Yes' --negative 'No, choose another'; then
+            printf '%s\n' "${detected}" >"${answers_dir}/timezone"
+            return 0
+        fi
+        show_title
+    else
+        gum style 'The timezone could not be found. Please choose it.'
+    fi
+
+    chosen="$(timedatectl list-timezones | gum filter --placeholder 'Type your city')" || cancel_install
+    printf '%s\n' "${chosen}" >"${answers_dir}/timezone"
+}
+
 ask_keyboard() {
     local answer
     show_title
@@ -214,13 +239,16 @@ read -r
 
 ask_keyboard
 ask_wifi
+ask_timezone
 ask_disk
 ask_user
 
 show_title
 gum style 'Ready to install:'
-printf '  Disk:      %s (everything on it is erased)\n' "$(<"${answers_dir}/disk")"
 printf '  Keyboard:  %s\n' "$(<"${answers_dir}/keymap")"
+printf '  Language:  %s\n' "$(<"${answers_dir}/locale")"
+printf '  Timezone:  %s\n' "$(<"${answers_dir}/timezone")"
+printf '  Disk:      %s (everything on it is erased)\n' "$(<"${answers_dir}/disk")"
 printf '  User:      %s\n\n' "$(<"${answers_dir}/username")"
 
 if gum confirm 'Install Cuckoo Linux now?' --affirmative 'Yes, install' --negative 'No, go to the console'; then

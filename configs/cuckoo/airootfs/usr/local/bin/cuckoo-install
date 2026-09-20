@@ -110,24 +110,6 @@ mount_disk() {
     mount -t vfat -- "${esp_partition}" "${target_dir}/boot"
 }
 
-# The timezone comes from the internet, UTC when there is no answer.
-# The network can take a few seconds to be ready, so it waits a bit.
-detect_timezone() {
-    local try=0 service timezone=''
-    while (( try++ < 5 )); do
-        for service in 'https://ipinfo.io/timezone' 'http://ip-api.com/line/?fields=timezone'; do
-            timezone="$(curl --fail --silent --max-time 3 "${service}" 2>/dev/null | head -1)"
-            [[ -n "${timezone}" ]] && break 2
-        done
-        sleep 3
-    done
-    if [[ -n "${timezone}" && -f "/usr/share/zoneinfo/${timezone}" ]]; then
-        printf '%s\n' "${timezone}"
-    else
-        printf 'UTC\n'
-    fi
-}
-
 write_archinstall_files() {
     local packages_json
     packages_json="$(printf '"%s",' "${base_packages[@]}")"
@@ -170,6 +152,7 @@ keymap="$(read_answer keymap)"
 locale="$(read_answer locale)"
 username="$(read_answer username)"
 password="$(read_answer password)"
+timezone="$(read_answer timezone)"
 
 [[ -b "${disk}" ]] || fail "'${disk}' is not a disk."
 if findmnt --source "${disk}" &>/dev/null || findmnt "${disk}"* &>/dev/null; then
@@ -181,8 +164,6 @@ root_partition=""
 
 : >"${log_file}"
 printf '\nInstalling Cuckoo Linux on %s\n\n' "${disk}"
-
-timezone="$(detect_timezone)"
 
 run_step 'Preparing the disk' prepare_disk
 find_partitions
