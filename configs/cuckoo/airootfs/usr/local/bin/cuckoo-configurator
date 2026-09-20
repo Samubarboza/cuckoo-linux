@@ -1,0 +1,260 @@
+#!/usr/bin/env bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Ask the few questions needed to install Cuckoo Linux.
+# It only writes the answers, it never touches a disk.
+
+set -e -u
+
+answers_dir="${CUCKOO_ANSWERS_DIR:-/tmp/cuckoo}"
+logo_file="/usr/local/share/cuckoo/logo.txt"
+screen_width=70
+
+cancel_install() {
+    printf '\nInstall cancelled. Nothing was changed.\n'
+    exit 1
+}
+
+show_title() {
+    # Clear the screen without needing a terminal database
+    printf '\033[2J\033[H'
+    if [[ -f "${logo_file}" ]]; then
+        gum style --foreground 15 --align center --width "${screen_width}" "$(<"${logo_file}")"
+    fi
+    gum style --align center --width "${screen_width}" --foreground 8 "Arch Linux for developers"
+    printf '\n'
+}
+
+has_internet() {
+    curl --fail --silent --max-time 5 --output /dev/null https://archlinux.org/
+}
+
+wifi_device() {
+    iwctl station list 2>/dev/null | sed -E 's/\x1b\[[0-9;]*m//g' | awk '$1 ~ /^wl/ { print $1; exit }'
+}
+
+wifi_networks() {
+    iwctl station "$1" get-networks 2>/dev/null \
+        | sed -E 's/\x1b\[[0-9;]*m//g' \
+        | sed -E 's/^\s*>?\s*//; s/\s+(psk|open|8021x)\s+\*+\s*$//' \
+        | grep -vE '^(Available networks|-+|Network name.*|$)'
+}
+
+# The install needs internet. Ask for Wi-Fi only when there is none.
+ask_wifi() {
+    local device networks network password try=0
+    has_internet && return 0
+
+    device="$(wifi_device)" || device=''
+    if [[ -z "${device}" ]]; then
+        show_title
+        gum style --foreground 1 'There is no internet and no Wi-Fi card was found.'
+        gum style 'Plug a network cable and start again.'
+        cancel_install
+    fi
+
+    while true; do
+        show_title
+        gum style 'Looking for Wi-Fi networks...'
+        iwctl station "${device}" scan &>/dev/null || true
+        sleep 3
+        mapfile -t networks < <(wifi_networks "${device}")
+
+        show_title
+        if (( ${#networks[@]} == 0 )); then
+            gum style --foreground 1 'No Wi-Fi network was found.'
+            gum confirm 'Try again?' --affirmative 'Search again' --negative 'Cancel' || cancel_install
+            continue
+        fi
+
+        network="$(printf '%s\n' "${networks[@]}" | gum choose --header 'Wi-Fi network')" || cancel_install
+        password="$(gum input --password --placeholder 'Wi-Fi password')" || cancel_install
+
+        show_title
+        gum style 'Connecting...'
+        iwctl --passphrase "${password}" station "${device}" connect "${network}" &>/dev/null || true
+
+        try=0
+        while (( try++ < 10 )); do
+            has_internet && return 0
+            sleep 2
+        done
+
+        show_title
+        gum style --foreground 1 'Could not connect to that network.'
+        gum confirm 'Try again?' --affirmative 'Try again' --negative 'Cancel' || cancel_install
+    done
+}
+
+# The timezone comes from the internet, and the person can change it
+ask_timezone() {
+    local detected='' service chosen
+    for service in 'https://ipinfo.io/timezone' 'http://ip-api.com/line/?fields=timezone'; do
+        detected="$(curl --fail --silent --max-time 5 "${service}" 2>/dev/null | head -1)"
+        [[ -n "${detected}" && -f "/usr/share/zoneinfo/${detected}" ]] && break
+        detected=''
+    done
+
+    show_title
+    if [[ -n "${detected}" ]]; then
+        gum style "Your timezone looks like ${detected}."
+        if gum confirm 'Is this right?' --affirmative 'Yes' --negative 'No, choose another'; then
+            printf '%s\n' "${detected}" >"${answers_dir}/timezone"
+            return 0
+        fi
+        show_title
+    else
+        gum style 'The timezone could not be found. Please choose it.'
+    fi
+
+    chosen="$(timedatectl list-timezones | gum filter --placeholder 'Type your city')" || cancel_install
+    printf '%s\n' "${chosen}" >"${answers_dir}/timezone"
+}
+
+ask_keyboard() {
+    local answer
+    show_title
+    answer="$(gum choose --header 'Keyboard and language' 'English (US)' 'Spanish (Latin America)')" || cancel_install
+    if [[ "${answer}" == 'English (US)' ]]; then
+        printf 'us\n' >"${answers_dir}/keymap"
+        printf 'en_US.UTF-8\n' >"${answers_dir}/locale"
+    else
+        printf 'la-latin1\n' >"${answers_dir}/keymap"
+        printf 'es_AR.UTF-8\n' >"${answers_dir}/locale"
+    fi
+}
+
+# True when the live system uses this disk, which means it is the install media.
+# Nothing else is mounted in the live system, so this also protects busy disks.
+disk_in_use() {
+    local device
+    while read -r device; do
+        findmnt --source "${device}" &>/dev/null && return 0
+    done < <(lsblk --list --noheadings --output PATH -- "$1")
+    return 1
+}
+
+# Tell the person what is on the disk, so nothing is erased by mistake
+show_disk_content() {
+    local partition size file_system label lines='' systems=''
+
+    while read -r partition size; do
+        file_system="$(blkid --output value --match-tag TYPE -- "${partition}" 2>/dev/null)" || file_system=''
+        label="$(blkid --output value --match-tag LABEL -- "${partition}" 2>/dev/null)" || label=''
+        lines+="  ${partition}  ${size}  ${file_system:-unknown}  ${label}"$'\n'
+        case "${file_system}" in
+            ntfs) [[ "${systems}" == *Windows* ]] || systems+='Windows ' ;;
+            ext4|btrfs|xfs) [[ "${systems}" == *Linux* ]] || systems+='Linux ' ;;
+            apfs|hfsplus) [[ "${systems}" == *macOS* ]] || systems+='macOS ' ;;
+        esac
+    done < <(lsblk --list --noheadings --output PATH,SIZE -- "$1" | tail -n +2)
+
+    if [[ -z "${lines}" ]]; then
+        gum style 'This disk is empty.'
+        printf '\n'
+        return 0
+    fi
+
+    if [[ -n "${systems}" ]]; then
+        gum style --foreground 3 "This disk already has: ${systems% }"
+    else
+        gum style --foreground 3 'This disk already has data.'
+    fi
+    printf '%s\n' "${lines}"
+}
+
+ask_disk() {
+    local disk_list free_disks disk_line chosen_line chosen_disk typed_word
+    disk_list="$(lsblk --nodeps --noheadings --output PATH,SIZE,MODEL --exclude 7,11)"
+
+    free_disks=''
+    while read -r disk_line; do
+        [[ -n "${disk_line}" ]] || continue
+        disk_in_use "${disk_line%% *}" && continue
+        free_disks+="${disk_line}"$'\n'
+    done <<<"${disk_list}"
+    disk_list="${free_disks%$'\n'}"
+
+    if [[ -z "${disk_list}" ]]; then
+        printf 'ERROR: no disk was found on this computer.\n' >&2
+        exit 1
+    fi
+
+    show_title
+    chosen_line="$(printf '%s\n' "${disk_list}" | gum choose --header 'Where do you want to install Cuckoo?')" \
+        || cancel_install
+    chosen_disk="${chosen_line%% *}"
+
+    show_title
+    show_disk_content "${chosen_disk}"
+    gum style --foreground 1 "This erases everything on ${chosen_disk}."
+    typed_word="$(gum input --placeholder 'Type ERASE to continue')" || cancel_install
+    [[ "${typed_word}" == 'ERASE' ]] || cancel_install
+
+    printf '%s\n' "${chosen_disk}" >"${answers_dir}/disk"
+}
+
+ask_user() {
+    local user_name first_password second_password
+    while true; do
+        show_title
+        user_name="$(gum input --placeholder 'Your name, in small letters')" || cancel_install
+        if [[ "${user_name}" =~ ^[a-z][a-z0-9_-]{0,30}$ ]]; then
+            break
+        fi
+        gum style --foreground 1 'Use only small letters, numbers, - and _. Start with a letter.'
+        sleep 2
+    done
+
+    while true; do
+        show_title
+        first_password="$(gum input --password --placeholder 'Password')" || cancel_install
+        second_password="$(gum input --password --placeholder 'Repeat the password')" || cancel_install
+        if [[ -z "${first_password}" ]]; then
+            gum style --foreground 1 'The password can not be empty.'
+        elif [[ "${first_password}" != "${second_password}" ]]; then
+            gum style --foreground 1 'The passwords are not the same.'
+        else
+            break
+        fi
+        sleep 2
+    done
+
+    printf '%s\n' "${user_name}" >"${answers_dir}/username"
+    printf '%s\n' "${first_password}" >"${answers_dir}/password"
+    chmod 600 -- "${answers_dir}/password"
+}
+
+if ! command -v gum &>/dev/null; then
+    printf 'ERROR: gum was not found.\n' >&2
+    exit 1
+fi
+
+install -d -m 0700 -- "${answers_dir}"
+
+show_title
+gum style --align center --width "${screen_width}" 'Press enter to start'
+read -r
+
+ask_keyboard
+ask_wifi
+ask_timezone
+ask_disk
+ask_user
+
+show_title
+gum style --border rounded --padding '0 2' --border-foreground 8 \
+    "$(printf 'Keyboard   %s\nLanguage   %s\nTimezone   %s\nDisk       %s  (everything on it is erased)\nUser       %s' \
+        "$(<"${answers_dir}/keymap")" \
+        "$(<"${answers_dir}/locale")" \
+        "$(<"${answers_dir}/timezone")" \
+        "$(<"${answers_dir}/disk")" \
+        "$(<"${answers_dir}/username")")"
+printf '\n'
+
+if gum confirm 'Install Cuckoo Linux now?' --affirmative 'Yes, install' --negative 'No, go to the console'; then
+    exec cuckoo-install
+fi
+
+printf '\nNothing was changed. Run cuckoo-install when you are ready.\n'

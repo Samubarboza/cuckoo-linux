@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Install Cuckoo Linux with the answers from cuckoo-configurator.
+# It erases the chosen disk, so it asks nothing: the questions were asked before.
+
+set -e -u
+
+answers_dir="${CUCKOO_ANSWERS_DIR:-/tmp/cuckoo}"
+target_dir="${CUCKOO_TARGET_DIR:-/mnt}"
+log_file="${answers_dir}/install.log"
+hardware_script="/usr/local/bin/cuckoo-hardware"
+hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
+esp_size="1GiB"
+btrfs_mount_options="noatime,compress=zstd"
+
+base_packages=(
+    intel-ucode amd-ucode
+    btrfs-progs
+    networkmanager
+    pipewire pipewire-pulse wireplumber
+    bluez bluez-utils
+    sudo git nano
+)
+
+fail() {
+    printf '\nERROR: %s\n' "$1" >&2
+    printf 'The details are in %s\n' "${log_file}" >&2
+    exit 1
+}
+
+# Run a long command and show that it is working: a spinner, the seconds it takes
+# and the last line of its output. The whole output stays in the log.
+run_step() {
+    local may_fail=0
+    if [[ "$1" == '--may-fail' ]]; then
+        may_fail=1
+        shift
+    fi
+    local title="$1" spinner=$'|/-\\' frame=0 start_time="${SECONDS}" last_line step_pid
+    shift
+
+    "$@" >>"${log_file}" 2>&1 &
+    step_pid=$!
+
+    while kill -0 "${step_pid}" 2>/dev/null; do
+        last_line="$(tail -1 -- "${log_file}" 2>/dev/null | tr -d '\r' | cut -c1-50)"
+        printf '\r\033[2K  %s %s (%ss)  %s' \
+            "${spinner:$((frame++ % 4)):1}" "${title}" "$(( SECONDS - start_time ))" "${last_line}"
+        sleep 0.3
+    done
+
+    if ! wait "${step_pid}"; then
+        printf '\r\033[2K'
+        (( may_fail )) && return 1
+        fail "${title} failed."
+    fi
+    printf '\r\033[2K  [ok] %s (%ss)\n' "${title}" "$(( SECONDS - start_time ))"
+}
+
+read_answer() {
+    local answer_file="${answers_dir}/$1"
+    [[ -r "${answer_file}" ]] || fail "the answer '$1' is missing. Run cuckoo-configurator first."
+    <"${answer_file}" head -1
+}
+
+# Read the new partitions from the disk instead of guessing their names.
+# The disk was just erased, so they come in the order they were created.
+find_partitions() {
+    local try=0 partitions=()
+    partprobe -- "${disk}" &>/dev/null || true
+    while (( try++ < 10 )); do
+        udevadm settle &>/dev/null || true
+        mapfile -t partitions < <(lsblk --list --noheadings --output PATH -- "${disk}" | tail -n +2)
+        esp_partition="${partitions[0]:-}"
+        root_partition="${partitions[1]:-}"
+        [[ -b "${esp_partition}" && -b "${root_partition}" ]] && return 0
+        sleep 1
+    done
+    fail 'the new partitions were not found.'
+}
+
+prepare_disk() {
+    sgdisk --zap-all -- "${disk}"
+    sgdisk --new="1:0:+${esp_size}" --typecode=1:ef00 --change-name=1:CUCKOO_ESP \
+        --new=2:0:0 --typecode=2:8304 --change-name=2:CUCKOO_ROOT -- "${disk}"
+    udevadm settle
+}
+
+format_disk() {
+    mkfs.fat -F 32 -n CUCKOO_ESP -- "${esp_partition}"
+    mkfs.btrfs -f -L CUCKOO -- "${root_partition}"
+}
+
+mount_disk() {
+    local subvolume
+    # Always say the file system, otherwise mount tries others first and the screen fills with errors
+    mount -t btrfs -- "${root_partition}" "${target_dir}"
+    for subvolume in @ @home @log @pkg; do
+        btrfs subvolume create "${target_dir}/${subvolume}"
+    done
+    umount -- "${target_dir}"
+
+    mount -t btrfs -o "${btrfs_mount_options},subvol=@" -- "${root_partition}" "${target_dir}"
+    mkdir -p -- "${target_dir}/home" "${target_dir}/var/log" "${target_dir}/var/cache/pacman/pkg" "${target_dir}/boot"
+    mount -t btrfs -o "${btrfs_mount_options},subvol=@home" -- "${root_partition}" "${target_dir}/home"
+    mount -t btrfs -o "${btrfs_mount_options},subvol=@log" -- "${root_partition}" "${target_dir}/var/log"
+    mount -t btrfs -o "${btrfs_mount_options},subvol=@pkg" -- "${root_partition}" "${target_dir}/var/cache/pacman/pkg"
+    mount -t vfat -- "${esp_partition}" "${target_dir}/boot"
+}
+
+write_archinstall_files() {
+    local packages_json
+    packages_json="$(printf '"%s",' "${base_packages[@]}")"
+    packages_json="[${packages_json%,}]"
+
+    cat >"${answers_dir}/archinstall.json" <<EOF
+{
+  "disk_config": { "config_type": "pre_mounted_config", "mountpoint": "${target_dir}" },
+  "bootloader": "Grub",
+  "hostname": "cuckoo",
+  "kernels": ["linux"],
+  "locale_config": { "kb_layout": "${keymap}", "sys_lang": "${locale}", "sys_enc": "UTF-8" },
+  "network_config": { "type": "nm" },
+  "ntp": true,
+  "packages": ${packages_json},
+  "profile_config": null,
+  "services": ["bluetooth"],
+  "swap": { "enabled": true, "algorithm": "zstd" },
+  "timezone": "${timezone}"
+}
+EOF
+
+    cat >"${answers_dir}/credentials.json" <<EOF
+{
+  "!users": [
+    { "username": "${username}", "!password": "${password}", "sudo": true, "groups": [] }
+  ]
+}
+EOF
+    chmod 600 -- "${answers_dir}/credentials.json"
+}
+
+if (( EUID != 0 )); then
+    printf 'ERROR: run this as root.\n' >&2
+    exit 1
+fi
+
+disk="$(read_answer disk)"
+keymap="$(read_answer keymap)"
+locale="$(read_answer locale)"
+username="$(read_answer username)"
+password="$(read_answer password)"
+timezone="$(read_answer timezone)"
+
+[[ -b "${disk}" ]] || fail "'${disk}' is not a disk."
+if findmnt --source "${disk}" &>/dev/null || findmnt "${disk}"* &>/dev/null; then
+    fail "'${disk}' is in use. Reboot and try again."
+fi
+
+esp_partition=""
+root_partition=""
+
+: >"${log_file}"
+printf '\nInstalling Cuckoo Linux on %s\n\n' "${disk}"
+
+run_step 'Preparing the disk' prepare_disk
+find_partitions
+run_step 'Formatting the disk' format_disk
+run_step 'Mounting the disk' mount_disk
+write_archinstall_files
+run_step 'Installing the base system' \
+    archinstall --silent --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
+
+install_hardware_drivers() {
+    install -Dm 755 -- "${hardware_script}" "${target_dir}${hardware_script}"
+    install -d -m 0755 -- "${target_dir}${hardware_fixes_dir}"
+    install -m 0755 -- "${hardware_fixes_dir}"/*.sh "${target_dir}${hardware_fixes_dir}/"
+    arch-chroot "${target_dir}" "${hardware_script}"
+}
+
+# The drivers are useful but not needed to boot, so a failure only warns
+drivers_warning=''
+if ! run_step --may-fail 'Installing your video drivers' install_hardware_drivers; then
+    drivers_warning='yes'
+fi
+
+# A clean screen for the last message
+printf '\033[2J\033[H'
+printf 'Done! Cuckoo Linux is installed.\n'
+printf 'Remove the USB drive.\n\n'
+if [[ -n "${drivers_warning}" ]]; then
+    printf 'The video drivers were not installed.\n'
+    printf 'Run cuckoo-hardware as root after the first boot.\n\n'
+fi
+
+if gum confirm 'Reboot now?' --affirmative 'Reboot now' --negative 'Go to the console'; then
+    systemctl reboot
+fi
