@@ -244,12 +244,14 @@ ask_disk
 ask_user
 
 show_title
-gum style 'Ready to install:'
-printf '  Keyboard:  %s\n' "$(<"${answers_dir}/keymap")"
-printf '  Language:  %s\n' "$(<"${answers_dir}/locale")"
-printf '  Timezone:  %s\n' "$(<"${answers_dir}/timezone")"
-printf '  Disk:      %s (everything on it is erased)\n' "$(<"${answers_dir}/disk")"
-printf '  User:      %s\n\n' "$(<"${answers_dir}/username")"
+gum style --border rounded --padding '0 2' --border-foreground 8 \
+    "$(printf 'Keyboard   %s\nLanguage   %s\nTimezone   %s\nDisk       %s  (everything on it is erased)\nUser       %s' \
+        "$(<"${answers_dir}/keymap")" \
+        "$(<"${answers_dir}/locale")" \
+        "$(<"${answers_dir}/timezone")" \
+        "$(<"${answers_dir}/disk")" \
+        "$(<"${answers_dir}/username")")"
+printf '\n'
 
 if gum confirm 'Install Cuckoo Linux now?' --affirmative 'Yes, install' --negative 'No, go to the console'; then
     exec cuckoo-install
