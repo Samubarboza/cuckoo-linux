@@ -262,6 +262,9 @@ install_desktop_package() {
         --noconfirm -U -- "${desktop_packages_dir}"/cuckoo-desktop-*.pkg.tar.zst || return 1
     # archinstall already made the user, so /etc/skel reached it too late
     arch-chroot "${target_dir}" cp -r --no-target-directory /etc/skel "/home/${username}" || return 1
+    # The settings ship with a default terminal, put in the chosen one
+    sed -i "s|^\$terminal = .*|\$terminal = ${terminal}|" \
+        "${target_dir}/home/${username}/.config/hypr/hyprland.conf" || return 1
     arch-chroot "${target_dir}" chown -R "${username}:" "/home/${username}" || return 1
     # Only now, so a broken desktop leaves the plain console login working
     arch-chroot "${target_dir}" systemctl enable greetd.service || return 1
