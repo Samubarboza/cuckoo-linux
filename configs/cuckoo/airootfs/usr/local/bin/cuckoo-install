@@ -76,24 +76,32 @@ format_disk() {
 
 mount_disk() {
     local subvolume
-    mount -- "${root_partition}" "${target_dir}"
+    # Always say the file system, otherwise mount tries others first and the screen fills with errors
+    mount -t btrfs -- "${root_partition}" "${target_dir}"
     for subvolume in @ @home @log @pkg; do
         btrfs subvolume create "${target_dir}/${subvolume}"
     done
     umount -- "${target_dir}"
 
-    mount -o "${btrfs_mount_options},subvol=@" -- "${root_partition}" "${target_dir}"
+    mount -t btrfs -o "${btrfs_mount_options},subvol=@" -- "${root_partition}" "${target_dir}"
     mkdir -p -- "${target_dir}/home" "${target_dir}/var/log" "${target_dir}/var/cache/pacman/pkg" "${target_dir}/boot"
-    mount -o "${btrfs_mount_options},subvol=@home" -- "${root_partition}" "${target_dir}/home"
-    mount -o "${btrfs_mount_options},subvol=@log" -- "${root_partition}" "${target_dir}/var/log"
-    mount -o "${btrfs_mount_options},subvol=@pkg" -- "${root_partition}" "${target_dir}/var/cache/pacman/pkg"
-    mount -- "${esp_partition}" "${target_dir}/boot"
+    mount -t btrfs -o "${btrfs_mount_options},subvol=@home" -- "${root_partition}" "${target_dir}/home"
+    mount -t btrfs -o "${btrfs_mount_options},subvol=@log" -- "${root_partition}" "${target_dir}/var/log"
+    mount -t btrfs -o "${btrfs_mount_options},subvol=@pkg" -- "${root_partition}" "${target_dir}/var/cache/pacman/pkg"
+    mount -t vfat -- "${esp_partition}" "${target_dir}/boot"
 }
 
-# The timezone comes from the internet, UTC when there is no answer
+# The timezone comes from the internet, UTC when there is no answer.
+# The network can take a few seconds to be ready, so it waits a bit.
 detect_timezone() {
-    local timezone
-    timezone="$(curl --fail --silent --max-time 5 https://ipapi.co/timezone 2>/dev/null)" || timezone=""
+    local try=0 service timezone=''
+    while (( try++ < 5 )); do
+        for service in 'https://ipinfo.io/timezone' 'http://ip-api.com/line/?fields=timezone'; do
+            timezone="$(curl --fail --silent --max-time 3 "${service}" 2>/dev/null | head -1)"
+            [[ -n "${timezone}" ]] && break 2
+        done
+        sleep 3
+    done
     if [[ -n "${timezone}" && -f "/usr/share/zoneinfo/${timezone}" ]]; then
         printf '%s\n' "${timezone}"
     else
@@ -180,4 +188,8 @@ if ! install_hardware_drivers >>"${log_file}" 2>&1; then
 fi
 
 printf '\nDone! Cuckoo Linux is installed.\n'
-printf 'Remove the USB drive and reboot.\n'
+printf 'Remove the USB drive.\n\n'
+
+if gum confirm 'Reboot now?' --affirmative 'Reboot now' --negative 'Go to the console'; then
+    systemctl reboot
+fi
