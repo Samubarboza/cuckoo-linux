@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Install the video drivers for this computer.
+# Run it as root on the installed system.
+
+set -e -u
+
+pci_devices_dir="${CUCKOO_PCI_DEVICES_PATH:-/sys/bus/pci/devices}"
+hardware_fixes_dir="${CUCKOO_HARDWARE_FIXES_PATH:-/usr/local/share/cuckoo/hardware}"
+packages_to_install=(mesa vulkan-icd-loader)
+found_video_card=0
+found_nvidia_card=0
+
+if (( EUID != 0 )); then
+    printf 'ERROR: run this as root.\n' >&2
+    exit 1
+fi
+
+# Read the card ids from sysfs. Unlike lspci, this does not wake up a sleeping card.
+for pci_device in "${pci_devices_dir}"/*; do
+    [[ -r "${pci_device}/class" && -r "${pci_device}/vendor" ]] || continue
+    [[ "$(<"${pci_device}/class")" == 0x03* ]] || continue
+    case "$(<"${pci_device}/vendor")" in
+        0x8086)
+            packages_to_install+=(vulkan-intel intel-media-driver)
+            found_video_card=1
+            ;;
+        0x1002)
+            packages_to_install+=(vulkan-radeon libva-mesa-driver)
+            found_video_card=1
+            ;;
+        0x10de)
+            packages_to_install+=(nvidia-open-dkms nvidia-utils libva-nvidia-driver linux-headers)
+            found_video_card=1
+            found_nvidia_card=1
+            ;;
+    esac
+done
+
+if (( ! found_video_card )); then
+    printf 'No known video card was found. No video driver is installed.\n'
+else
+    printf 'Installing video drivers: %s\n' "${packages_to_install[*]}"
+    if ! pacman -S --needed --noconfirm -- "${packages_to_install[@]}"; then
+        printf 'ERROR: the drivers could not be installed. Check the internet connection.\n' >&2
+        exit 1
+    fi
+fi
+
+if (( found_nvidia_card )); then
+    # NVIDIA needs to load early, otherwise the screen can stay black
+    install -d -m 0755 -- /etc/modprobe.d /etc/mkinitcpio.conf.d
+    printf 'options nvidia_drm modeset=1\n' >/etc/modprobe.d/nvidia.conf
+    printf 'MODULES+=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)\n' >/etc/mkinitcpio.conf.d/nvidia.conf
+    if ! mkinitcpio -P; then
+        printf 'ERROR: the boot image could not be built for NVIDIA.\n' >&2
+        exit 1
+    fi
+fi
+
+# Small fixes for some hardware. A fix that fails must never stop the install.
+for hardware_fix in "${hardware_fixes_dir}"/*.sh; do
+    [[ -f "${hardware_fix}" ]] || continue
+    if ! bash "${hardware_fix}"; then
+        printf "WARNING: the fix '%s' failed and was skipped.\n" "${hardware_fix##*/}" >&2
+    fi
+done
+
+printf 'Done! The hardware of this computer is ready.\n'
