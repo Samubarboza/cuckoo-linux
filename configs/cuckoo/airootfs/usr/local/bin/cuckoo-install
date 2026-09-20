@@ -33,7 +33,15 @@ base_packages=(
     sudo git nano
 )
 
+# The log lives in memory and is lost on reboot, so keep a copy on the disk
+save_log_to_disk() {
+    if [[ -d "${target_dir}/var/log" ]]; then
+        cp -- "${log_file}" "${target_dir}/var/log/cuckoo-install.log" 2>/dev/null || true
+    fi
+}
+
 fail() {
+    save_log_to_disk
     printf '\033[2J\033[H'
     printf 'ERROR: %s\n' "$1" >&2
     printf 'The details are in %s\n' "${log_file}" >&2
@@ -266,8 +274,10 @@ install_desktop_package() {
     sed -i "s|^\$terminal = .*|\$terminal = ${terminal}|" \
         "${target_dir}/home/${username}/.config/hypr/hyprland.conf" || return 1
     arch-chroot "${target_dir}" chown -R "${username}:" "/home/${username}" || return 1
-    # Only now, so a broken desktop leaves the plain console login working
+    # Only now, so a broken desktop leaves the plain console login working.
+    # graphical.target is what pulls in the login screen, the console one does not.
     arch-chroot "${target_dir}" systemctl enable greetd.service || return 1
+    arch-chroot "${target_dir}" systemctl set-default graphical.target || return 1
 }
 
 # The desktop is not needed to boot, so a failure only warns
@@ -288,6 +298,8 @@ drivers_warning=''
 if ! run_step --may-fail 'Installing your video drivers' install_hardware_drivers; then
     drivers_warning='yes'
 fi
+
+save_log_to_disk
 
 # A clean screen for the last message
 printf '\033[2J\033[H'
