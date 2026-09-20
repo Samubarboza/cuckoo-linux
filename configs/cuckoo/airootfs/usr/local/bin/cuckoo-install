@@ -12,11 +12,12 @@ target_dir="${CUCKOO_TARGET_DIR:-/mnt}"
 log_file="${answers_dir}/install.log"
 hardware_script="/usr/local/bin/cuckoo-hardware"
 hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
+desktop_packages_dir="/usr/local/share/cuckoo/packages"
 logo_file="/usr/local/share/cuckoo/logo.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=5
+total_steps=6
 steps_done=0
 packages_total=0
 
@@ -247,6 +248,21 @@ packages_total="$(count_target_packages)"
 run_step --progress base_system_percent 'Installing the base system' \
     setsid --wait archinstall --silent --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
 
+# Every line says what to do when it fails: inside a step, set -e does not stop the script
+install_desktop_package() {
+    pacman --root "${target_dir}" --dbpath "${target_dir}/var/lib/pacman" \
+        --noconfirm -U -- "${desktop_packages_dir}"/cuckoo-desktop-*.pkg.tar.zst || return 1
+    # archinstall already made the user, so /etc/skel reached it too late
+    arch-chroot "${target_dir}" cp -r --no-target-directory /etc/skel "/home/${username}" || return 1
+    arch-chroot "${target_dir}" chown -R "${username}:" "/home/${username}" || return 1
+}
+
+# The desktop is not needed to boot, so a failure only warns
+desktop_warning=''
+if ! run_step --may-fail 'Installing the desktop' install_desktop_package; then
+    desktop_warning='yes'
+fi
+
 install_hardware_drivers() {
     install -Dm 755 -- "${hardware_script}" "${target_dir}${hardware_script}"
     install -d -m 0755 -- "${target_dir}${hardware_fixes_dir}"
@@ -264,6 +280,9 @@ fi
 printf '\033[2J\033[H'
 printf 'Done! Cuckoo Linux is installed.\n'
 printf 'Remove the USB drive.\n\n'
+if [[ -n "${desktop_warning}" ]]; then
+    printf 'The desktop settings were not installed.\n\n'
+fi
 if [[ -n "${drivers_warning}" ]]; then
     printf 'The video drivers were not installed.\n'
     printf 'Run cuckoo-hardware as root after the first boot.\n\n'
