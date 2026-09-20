@@ -125,6 +125,13 @@ ask_keyboard() {
     fi
 }
 
+ask_terminal() {
+    local answer
+    show_title
+    answer="$(gum choose --header 'Terminal' 'alacritty' 'kitty' 'ghostty')" || cancel_install
+    printf '%s\n' "${answer}" >"${answers_dir}/terminal"
+}
+
 # True when the live system uses this disk, which means it is the install media.
 # Nothing else is mounted in the live system, so this also protects busy disks.
 disk_in_use() {
@@ -238,6 +245,7 @@ gum style --align center --width "${screen_width}" 'Press enter to start'
 read -r
 
 ask_keyboard
+ask_terminal
 ask_wifi
 ask_timezone
 ask_disk
@@ -245,9 +253,10 @@ ask_user
 
 show_title
 gum style --border rounded --padding '0 2' --border-foreground 8 \
-    "$(printf 'Keyboard   %s\nLanguage   %s\nTimezone   %s\nDisk       %s  (everything on it is erased)\nUser       %s' \
+    "$(printf 'Keyboard   %s\nLanguage   %s\nTerminal   %s\nTimezone   %s\nDisk       %s  (everything on it is erased)\nUser       %s' \
         "$(<"${answers_dir}/keymap")" \
         "$(<"${answers_dir}/locale")" \
+        "$(<"${answers_dir}/terminal")" \
         "$(<"${answers_dir}/timezone")" \
         "$(<"${answers_dir}/disk")" \
         "$(<"${answers_dir}/username")")"
