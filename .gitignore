@@ -17,3 +17,4 @@ man/version.rst
 /local/
 !configs/cuckoo/secureboot/MOK.cer
 grub-build/
+desktop-build/
