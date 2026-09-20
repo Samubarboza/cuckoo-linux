@@ -30,14 +30,33 @@ fail() {
     exit 1
 }
 
-# Run a long command, show a title while it works, and keep its output in the log
+# Run a long command and show that it is working: a spinner, the seconds it takes
+# and the last line of its output. The whole output stays in the log.
 run_step() {
-    local title="$1"
+    local may_fail=0
+    if [[ "$1" == '--may-fail' ]]; then
+        may_fail=1
+        shift
+    fi
+    local title="$1" spinner=$'|/-\\' frame=0 start_time="${SECONDS}" last_line step_pid
     shift
-    printf '  %s\n' "${title}"
-    if ! "$@" >>"${log_file}" 2>&1; then
+
+    "$@" >>"${log_file}" 2>&1 &
+    step_pid=$!
+
+    while kill -0 "${step_pid}" 2>/dev/null; do
+        last_line="$(tail -1 -- "${log_file}" 2>/dev/null | tr -d '\r' | cut -c1-50)"
+        printf '\r\033[2K  %s %s (%ss)  %s' \
+            "${spinner:$((frame++ % 4)):1}" "${title}" "$(( SECONDS - start_time ))" "${last_line}"
+        sleep 0.3
+    done
+
+    if ! wait "${step_pid}"; then
+        printf '\r\033[2K'
+        (( may_fail )) && return 1
         fail "${title} failed."
     fi
+    printf '\r\033[2K  [ok] %s (%ss)\n' "${title}" "$(( SECONDS - start_time ))"
 }
 
 read_answer() {
@@ -181,14 +200,19 @@ install_hardware_drivers() {
 }
 
 # The drivers are useful but not needed to boot, so a failure only warns
-printf '  Installing your video drivers\n'
-if ! install_hardware_drivers >>"${log_file}" 2>&1; then
-    printf '\nWARNING: the video drivers were not installed.\n' >&2
-    printf 'Run cuckoo-hardware as root after the first boot.\n' >&2
+drivers_warning=''
+if ! run_step --may-fail 'Installing your video drivers' install_hardware_drivers; then
+    drivers_warning='yes'
 fi
 
-printf '\nDone! Cuckoo Linux is installed.\n'
+# A clean screen for the last message
+printf '\033[2J\033[H'
+printf 'Done! Cuckoo Linux is installed.\n'
 printf 'Remove the USB drive.\n\n'
+if [[ -n "${drivers_warning}" ]]; then
+    printf 'The video drivers were not installed.\n'
+    printf 'Run cuckoo-hardware as root after the first boot.\n\n'
+fi
 
 if gum confirm 'Reboot now?' --affirmative 'Reboot now' --negative 'Go to the console'; then
     systemctl reboot
