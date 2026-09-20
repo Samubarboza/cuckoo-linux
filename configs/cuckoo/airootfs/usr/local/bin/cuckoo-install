@@ -10,6 +10,8 @@ set -e -u
 answers_dir="${CUCKOO_ANSWERS_DIR:-/tmp/cuckoo}"
 target_dir="${CUCKOO_TARGET_DIR:-/mnt}"
 log_file="${answers_dir}/install.log"
+hardware_script="/usr/local/bin/cuckoo-hardware"
+hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 
@@ -162,6 +164,20 @@ run_step 'Mounting the disk' mount_disk
 write_archinstall_files
 run_step 'Installing the base system' \
     archinstall --silent --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
+
+install_hardware_drivers() {
+    install -Dm 755 -- "${hardware_script}" "${target_dir}${hardware_script}"
+    install -d -m 0755 -- "${target_dir}${hardware_fixes_dir}"
+    install -m 0755 -- "${hardware_fixes_dir}"/*.sh "${target_dir}${hardware_fixes_dir}/"
+    arch-chroot "${target_dir}" "${hardware_script}"
+}
+
+# The drivers are useful but not needed to boot, so a failure only warns
+printf '  Installing your video drivers\n'
+if ! install_hardware_drivers >>"${log_file}" 2>&1; then
+    printf '\nWARNING: the video drivers were not installed.\n' >&2
+    printf 'Run cuckoo-hardware as root after the first boot.\n' >&2
+fi
 
 printf '\nDone! Cuckoo Linux is installed.\n'
 printf 'Remove the USB drive and reboot.\n'
