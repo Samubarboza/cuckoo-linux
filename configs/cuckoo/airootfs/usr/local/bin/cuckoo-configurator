@@ -26,6 +26,67 @@ show_title() {
     printf '\n'
 }
 
+has_internet() {
+    curl --fail --silent --max-time 5 --output /dev/null https://archlinux.org/
+}
+
+wifi_device() {
+    iwctl station list 2>/dev/null | sed -E 's/\x1b\[[0-9;]*m//g' | awk '$1 ~ /^wl/ { print $1; exit }'
+}
+
+wifi_networks() {
+    iwctl station "$1" get-networks 2>/dev/null \
+        | sed -E 's/\x1b\[[0-9;]*m//g' \
+        | sed -E 's/^\s*>?\s*//; s/\s+(psk|open|8021x)\s+\*+\s*$//' \
+        | grep -vE '^(Available networks|-+|Network name.*|$)'
+}
+
+# The install needs internet. Ask for Wi-Fi only when there is none.
+ask_wifi() {
+    local device networks network password try=0
+    has_internet && return 0
+
+    device="$(wifi_device)" || device=''
+    if [[ -z "${device}" ]]; then
+        show_title
+        gum style --foreground 1 'There is no internet and no Wi-Fi card was found.'
+        gum style 'Plug a network cable and start again.'
+        cancel_install
+    fi
+
+    while true; do
+        show_title
+        gum style 'Looking for Wi-Fi networks...'
+        iwctl station "${device}" scan &>/dev/null || true
+        sleep 3
+        mapfile -t networks < <(wifi_networks "${device}")
+
+        show_title
+        if (( ${#networks[@]} == 0 )); then
+            gum style --foreground 1 'No Wi-Fi network was found.'
+            gum confirm 'Try again?' --affirmative 'Search again' --negative 'Cancel' || cancel_install
+            continue
+        fi
+
+        network="$(printf '%s\n' "${networks[@]}" | gum choose --header 'Wi-Fi network')" || cancel_install
+        password="$(gum input --password --placeholder 'Wi-Fi password')" || cancel_install
+
+        show_title
+        gum style 'Connecting...'
+        iwctl --passphrase "${password}" station "${device}" connect "${network}" &>/dev/null || true
+
+        try=0
+        while (( try++ < 10 )); do
+            has_internet && return 0
+            sleep 2
+        done
+
+        show_title
+        gum style --foreground 1 'Could not connect to that network.'
+        gum confirm 'Try again?' --affirmative 'Try again' --negative 'Cancel' || cancel_install
+    done
+}
+
 ask_keyboard() {
     local answer
     show_title
@@ -152,6 +213,7 @@ gum style --align center --width "${screen_width}" 'Press enter to start'
 read -r
 
 ask_keyboard
+ask_wifi
 ask_disk
 ask_user
 
