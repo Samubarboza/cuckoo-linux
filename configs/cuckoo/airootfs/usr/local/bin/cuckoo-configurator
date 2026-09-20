@@ -20,7 +20,7 @@ show_title() {
     # Clear the screen without needing a terminal database
     printf '\033[2J\033[H'
     if [[ -f "${logo_file}" ]]; then
-        gum style --foreground 2 --align center --width "${screen_width}" "$(<"${logo_file}")"
+        gum style --foreground 15 --align center --width "${screen_width}" "$(<"${logo_file}")"
     fi
     gum style --align center --width "${screen_width}" --foreground 8 "Arch Linux for developers"
     printf '\n'
@@ -39,22 +39,57 @@ ask_keyboard() {
     fi
 }
 
-# The disk the live system booted from, so it is never offered as a target
-boot_disk_path() {
-    local boot_source boot_disk
-    boot_source="$(findmnt --noheadings --output SOURCE /run/archiso/bootmnt 2>/dev/null)" || return 0
-    [[ -n "${boot_source}" ]] || return 0
-    boot_disk="$(lsblk --noheadings --output PKNAME "${boot_source}" 2>/dev/null | head -1)"
-    [[ -n "${boot_disk}" ]] && printf '/dev/%s\n' "${boot_disk}"
+# True when the live system uses this disk, which means it is the install media.
+# Nothing else is mounted in the live system, so this also protects busy disks.
+disk_in_use() {
+    local device
+    while read -r device; do
+        findmnt --source "${device}" &>/dev/null && return 0
+    done < <(lsblk --list --noheadings --output PATH -- "$1")
+    return 1
+}
+
+# Tell the person what is on the disk, so nothing is erased by mistake
+show_disk_content() {
+    local partition size file_system label lines='' systems=''
+
+    while read -r partition size; do
+        file_system="$(blkid --output value --match-tag TYPE -- "${partition}" 2>/dev/null)" || file_system=''
+        label="$(blkid --output value --match-tag LABEL -- "${partition}" 2>/dev/null)" || label=''
+        lines+="  ${partition}  ${size}  ${file_system:-unknown}  ${label}"$'\n'
+        case "${file_system}" in
+            ntfs) [[ "${systems}" == *Windows* ]] || systems+='Windows ' ;;
+            ext4|btrfs|xfs) [[ "${systems}" == *Linux* ]] || systems+='Linux ' ;;
+            apfs|hfsplus) [[ "${systems}" == *macOS* ]] || systems+='macOS ' ;;
+        esac
+    done < <(lsblk --list --noheadings --output PATH,SIZE -- "$1" | tail -n +2)
+
+    if [[ -z "${lines}" ]]; then
+        gum style 'This disk is empty.'
+        printf '\n'
+        return 0
+    fi
+
+    if [[ -n "${systems}" ]]; then
+        gum style --foreground 3 "This disk already has: ${systems% }"
+    else
+        gum style --foreground 3 'This disk already has data.'
+    fi
+    printf '%s\n' "${lines}"
 }
 
 ask_disk() {
-    local disk_list boot_disk chosen_line chosen_disk typed_word
+    local disk_list free_disks disk_line chosen_line chosen_disk typed_word
     disk_list="$(lsblk --nodeps --noheadings --output PATH,SIZE,MODEL --exclude 7,11)"
-    boot_disk="$(boot_disk_path)"
-    if [[ -n "${boot_disk}" ]]; then
-        disk_list="$(printf '%s\n' "${disk_list}" | grep -v "^${boot_disk} " || true)"
-    fi
+
+    free_disks=''
+    while read -r disk_line; do
+        [[ -n "${disk_line}" ]] || continue
+        disk_in_use "${disk_line%% *}" && continue
+        free_disks+="${disk_line}"$'\n'
+    done <<<"${disk_list}"
+    disk_list="${free_disks%$'\n'}"
+
     if [[ -z "${disk_list}" ]]; then
         printf 'ERROR: no disk was found on this computer.\n' >&2
         exit 1
@@ -66,6 +101,7 @@ ask_disk() {
     chosen_disk="${chosen_line%% *}"
 
     show_title
+    show_disk_content "${chosen_disk}"
     gum style --foreground 1 "This erases everything on ${chosen_disk}."
     typed_word="$(gum input --placeholder 'Type ERASE to continue')" || cancel_install
     [[ "${typed_word}" == 'ERASE' ]] || cancel_install
@@ -120,4 +156,13 @@ ask_disk
 ask_user
 
 show_title
-gum style --align center --width "${screen_width}" 'All set! Run cuckoo-install to install Cuckoo Linux.'
+gum style 'Ready to install:'
+printf '  Disk:      %s (everything on it is erased)\n' "$(<"${answers_dir}/disk")"
+printf '  Keyboard:  %s\n' "$(<"${answers_dir}/keymap")"
+printf '  User:      %s\n\n' "$(<"${answers_dir}/username")"
+
+if gum confirm 'Install Cuckoo Linux now?' --affirmative 'Yes, install' --negative 'No, go to the console'; then
+    exec cuckoo-install
+fi
+
+printf '\nNothing was changed. Run cuckoo-install when you are ready.\n'
