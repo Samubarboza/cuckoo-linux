@@ -251,6 +251,11 @@ packages_total="$(count_target_packages)"
 run_step --progress base_system_percent 'Installing the base system' \
     setsid --wait archinstall --silent --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
 
+# The console login and the login screen both read this file
+if [[ -n "${logo}" ]]; then
+    printf '%s\n\n' "${logo}" >"${target_dir}/etc/issue"
+fi
+
 # Every line says what to do when it fails: inside a step, set -e does not stop the script
 install_desktop_package() {
     pacman --root "${target_dir}" --dbpath "${target_dir}/var/lib/pacman" \
