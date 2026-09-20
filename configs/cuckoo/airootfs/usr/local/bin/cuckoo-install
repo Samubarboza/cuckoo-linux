@@ -85,7 +85,7 @@ run_step() {
         (( may_fail )) && return 1
         fail "${title} failed."
     fi
-    (( steps_done++ ))
+    steps_done=$(( steps_done + 1 ))
     draw_screen "${title}" "$(( SECONDS - start_time ))" ''
 }
 
