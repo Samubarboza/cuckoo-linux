@@ -1,0 +1,16 @@
+diff --git a/src/gui/component.rs b/src/gui/component.rs
+index 0420058..c856db5 100644
+--- a/src/gui/component.rs
++++ b/src/gui/component.rs
+@@ -85,6 +85,11 @@ fn setup_users_sessions(model: &Greeter, widgets: &GreeterWidgets) {
+         widgets.ui.sessions_box.append(Some(session), session);
+     }
+ 
++    // With only one user there is nothing to pick, so the style hides the arrow.
++    if model.sys_util.get_users().len() < 2 {
++        widgets.ui.usernames_box.add_css_class("cuckoo-only-user");
++    }
++
+     // If the last user is known, show their login initially.
+     if let Some(last_user) = model.cache.get_last_user() {
+         initial_username = Some(last_user.to_string());
