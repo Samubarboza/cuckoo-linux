@@ -1,0 +1,36 @@
+# Maintainer: Samubarboza <samubjunior95@gmail.com>
+
+# Login screen for Cuckoo Linux, built from ReGreet.
+# The version follows the ReGreet release we build from.
+pkgname=cuckoo-greeter
+pkgver=0.5.0
+pkgrel=1
+pkgdesc="Login screen for Cuckoo Linux"
+arch=('x86_64')
+url="https://github.com/Samubarboza/cuckoo-linux"
+license=('GPL-3.0-or-later')
+depends=('greetd' 'gtk4' 'accountsservice' 'glib2' 'pango' 'cairo' 'gdk-pixbuf2')
+makedepends=('cargo')
+provides=('greetd-regreet')
+conflicts=('greetd-regreet')
+_upstream="ReGreet-${pkgver}"
+source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs/tags/${pkgver}.tar.gz")
+sha256sums=('7e26799dffdede183fc62d12aedbda5fea92d7d9802a180755d8a1d1fd93f2f7')
+
+# Download the crates first so the build itself needs no network.
+prepare() {
+    cd -- "${_upstream}"
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
+}
+
+build() {
+    cd -- "${_upstream}"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo build --frozen --release
+}
+
+package() {
+    cd -- "${_upstream}"
+    install -Dm 0755 -- "target/release/regreet" "${pkgdir}/usr/bin/regreet"
+    install -Dm 0644 -- "systemd-tmpfiles.conf" "${pkgdir}/usr/lib/tmpfiles.d/regreet.conf"
+}
