@@ -92,7 +92,7 @@ index 708dcd9..0420058 100644
                  },
                  #[template_child]
 diff --git a/src/gui/templates.rs b/src/gui/templates.rs
-index 997fcef..476603e 100644
+index 997fcef..ba61c6d 100644
 --- a/src/gui/templates.rs
 +++ b/src/gui/templates.rs
 @@ -8,6 +8,16 @@
@@ -112,7 +112,16 @@ index 997fcef..476603e 100644
  /// Button that ends the greeter (eg. Reboot)
  #[relm4::widget_template(pub)]
  impl WidgetTemplate for EndButton {
-@@ -70,103 +80,74 @@ impl WidgetTemplate for Ui {
+@@ -56,7 +66,7 @@ impl WidgetTemplate for Ui {
+ 
+                     /// Widget to display messages to the user
+                     #[name = "message_label"]
+-                    attach[0, 0, 3, 1] = &gtk::Label {
++                    attach[0, 0, 1, 1] = &gtk::Label {
+                         set_margin_bottom: 15,
+ 
+                         // Format all messages in boldface.
+@@ -70,103 +80,83 @@ impl WidgetTemplate for Ui {
                          },
                      },
  
@@ -120,85 +129,94 @@ index 997fcef..476603e 100644
 -                    attach[0, 1, 1, 1] = &EntryLabel {
 -                        set_label: "User:",
 -                        set_height_request: 45,
-+                    /// Widget where the user enters a secret
-+                    #[name = "secret_entry"]
-+                    attach[0, 1, 1, 1] = &gtk::PasswordEntry {
++                    /// The password box, with the login button sitting inside it
++                    attach[0, 1, 1, 1] = &gtk::Overlay {
 +                        set_hexpand: true,
-+                        set_placeholder_text: Some(password_placeholder()),
-+                        add_css_class: "cuckoo-password",
++
++                        gtk::Box {
++                            /// Widget where the user enters a secret
++                            #[name = "secret_entry"]
++                            gtk::PasswordEntry {
++                                set_hexpand: true,
++                                set_placeholder_text: Some(password_placeholder()),
++                                add_css_class: "cuckoo-password",
++                            },
++
++                            /// Widget where the user enters something visible
++                            #[name = "visible_entry"]
++                            gtk::Entry {
++                                set_hexpand: true,
++                                set_placeholder_text: Some(password_placeholder()),
++                                add_css_class: "cuckoo-password",
++                            },
++                        },
++
++                        /// Button to enter the password and login
++                        #[name = "login_button"]
++                        add_overlay = &gtk::Button {
++                            set_halign: gtk::Align::End,
++                            set_valign: gtk::Align::Center,
++                            set_focusable: true,
++                            set_icon_name: "go-next-symbolic",
++                            set_receives_default: true,
++                            add_css_class: "cuckoo-submit",
++                        },
++                    },
++
++                    /// Widget containing the usernames, shown under the password
++                    #[name = "usernames_box"]
++                    attach[0, 2, 1, 1] = &gtk::ComboBoxText {
++                        set_halign: gtk::Align::Center,
++                        add_css_class: "cuckoo-user",
                      },
  
 -                    /// Label for the sessions widget
--                    #[name = "session_label"]
--                    #[template]
--                    attach[0, 2, 1, 1] = &EntryLabel {
--                        set_label: "Session:",
--                        set_height_request: 45,
-+                    /// Widget where the user enters something visible
-+                    #[name = "visible_entry"]
-+                    attach[0, 1, 1, 1] = &gtk::Entry {
-+                        set_hexpand: true,
-+                        set_placeholder_text: Some(password_placeholder()),
-+                        add_css_class: "cuckoo-password",
-                     },
- 
--                    /// Widget containing the usernames
--                    #[name = "usernames_box"]
--                    attach[1, 1, 1, 1] = &gtk::ComboBoxText { set_hexpand: true },
--
--                    /// Widget where the user enters the username
--                    #[name = "username_entry"]
--                    attach[1, 1, 1, 1] = &gtk::Entry { set_hexpand: true },
-+                    /// Button to enter the password and login
-+                    #[name = "login_button"]
-+                    attach[1, 1, 1, 1] = &gtk::Button {
-+                        set_focusable: true,
-+                        set_icon_name: "go-next-symbolic",
-+                        set_receives_default: true,
-+                        add_css_class: "cuckoo-submit",
-+                    },
- 
--                    /// Widget containing the sessions
--                    #[name = "sessions_box"]
--                    attach[1, 2, 1, 1] = &gtk::ComboBoxText,
-+                    /// Widget containing the usernames, shown under the password
-+                    #[name = "usernames_box"]
-+                    attach[0, 2, 2, 1] = &gtk::ComboBoxText {
-+                        set_halign: gtk::Align::Center,
-+                        add_css_class: "cuckoo-user",
-+                    },
- 
--                    /// Widget where the user enters the session
--                    #[name = "session_entry"]
--                    attach[1, 2, 1, 1] = &gtk::Entry,
 +                    /// Widgets kept hidden: Cuckoo asks for the password and nothing else
-+                    #[name = "session_label"]
-+                    #[template]
-+                    attach[0, 3, 1, 1] = &EntryLabel { set_visible: false },
- 
--                    /// Label for the password widget
-                     #[name = "input_label"]
+                     #[name = "session_label"]
                      #[template]
 -                    attach[0, 2, 1, 1] = &EntryLabel {
+-                        set_label: "Session:",
 -                        set_height_request: 45,
 -                    },
 +                    attach[0, 3, 1, 1] = &EntryLabel { set_visible: false },
  
+-                    /// Widget containing the usernames
+-                    #[name = "usernames_box"]
+-                    attach[1, 1, 1, 1] = &gtk::ComboBoxText { set_hexpand: true },
++                    #[name = "input_label"]
++                    #[template]
++                    attach[0, 3, 1, 1] = &EntryLabel { set_visible: false },
+ 
+-                    /// Widget where the user enters the username
+                     #[name = "username_entry"]
+-                    attach[1, 1, 1, 1] = &gtk::Entry { set_hexpand: true },
++                    attach[0, 3, 1, 1] = &gtk::Entry { set_visible: false },
+ 
+-                    /// Widget containing the sessions
+                     #[name = "sessions_box"]
+-                    attach[1, 2, 1, 1] = &gtk::ComboBoxText,
++                    attach[0, 3, 1, 1] = &gtk::ComboBoxText { set_visible: false },
+ 
+-                    /// Widget where the user enters the session
+                     #[name = "session_entry"]
+-                    attach[1, 2, 1, 1] = &gtk::Entry,
++                    attach[0, 3, 1, 1] = &gtk::Entry { set_visible: false },
+ 
+-                    /// Label for the password widget
+-                    #[name = "input_label"]
+-                    #[template]
+-                    attach[0, 2, 1, 1] = &EntryLabel {
+-                        set_height_request: 45,
+-                    },
+-
 -                    /// Widget where the user enters a secret
 -                    #[name = "secret_entry"]
 -                    attach[1, 2, 1, 1] = &gtk::PasswordEntry { set_show_peek_icon: true },
-+                    #[name = "username_entry"]
-+                    attach[0, 3, 1, 1] = &gtk::Entry { set_visible: false },
- 
+-
 -                    /// Widget where the user enters something visible
 -                    #[name = "visible_entry"]
 -                    attach[1, 2, 1, 1] = &gtk::Entry,
-+                    #[name = "sessions_box"]
-+                    attach[0, 3, 1, 1] = &gtk::ComboBoxText { set_visible: false },
-+
-+                    #[name = "session_entry"]
-+                    attach[0, 3, 1, 1] = &gtk::Entry { set_visible: false },
- 
+-
 -                    /// Button to toggle manual user entry
                      #[name = "user_toggle"]
 -                    attach[2, 1, 1, 1] = &gtk::ToggleButton {
@@ -260,7 +278,7 @@ index 997fcef..476603e 100644
              },
  
              /// Collection of widgets appearing at the bottom
-@@ -205,6 +186,7 @@ impl WidgetTemplate for Ui {
+@@ -205,6 +195,7 @@ impl WidgetTemplate for Ui {
  
                  /// Collection of buttons that close the greeter (eg. Reboot)
                  gtk::Box {

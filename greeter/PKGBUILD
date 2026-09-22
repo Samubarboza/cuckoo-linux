@@ -9,14 +9,21 @@ pkgdesc="Login screen for Cuckoo Linux"
 arch=('x86_64')
 url="https://github.com/Samubarboza/cuckoo-linux"
 license=('GPL-3.0-or-later')
-depends=('greetd' 'gtk4' 'accountsservice' 'glib2' 'pango' 'cairo' 'gdk-pixbuf2')
+depends=('greetd' 'gtk4' 'accountsservice' 'glib2' 'pango' 'cairo' 'gdk-pixbuf2' 'librsvg')
 makedepends=('cargo')
 provides=('greetd-regreet')
 conflicts=('greetd-regreet')
+backup=('etc/greetd/regreet.css')
 _upstream="ReGreet-${pkgver}"
 source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs/tags/${pkgver}.tar.gz"
-        "0001-cuckoo-login-layout.patch")
+        "0001-cuckoo-login-layout.patch"
+        "0002-cuckoo-only-one-user.patch"
+        "regreet.css"
+        "lock.svg")
 sha256sums=('7e26799dffdede183fc62d12aedbda5fea92d7d9802a180755d8a1d1fd93f2f7'
+            'SKIP'
+            'SKIP'
+            'SKIP'
             'SKIP')
 
 # Apply our changes, then download the crates so the build needs no network.
@@ -35,7 +42,8 @@ build() {
 }
 
 package() {
-    cd -- "${_upstream}"
-    install -Dm 0755 -- "target/release/regreet" "${pkgdir}/usr/bin/regreet"
-    install -Dm 0644 -- "systemd-tmpfiles.conf" "${pkgdir}/usr/lib/tmpfiles.d/regreet.conf"
+    install -Dm 0755 -- "${_upstream}/target/release/regreet" "${pkgdir}/usr/bin/regreet"
+    install -Dm 0644 -- "${_upstream}/systemd-tmpfiles.conf" "${pkgdir}/usr/lib/tmpfiles.d/regreet.conf"
+    install -Dm 0644 -- "regreet.css" "${pkgdir}/etc/greetd/regreet.css"
+    install -Dm 0644 -- "lock.svg" "${pkgdir}/usr/share/cuckoo/lock.svg"
 }

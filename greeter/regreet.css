@@ -1,0 +1,101 @@
+/* Look of the Cuckoo login screen. */
+
+@define-color cuckoo_box rgba(23, 30, 40, 0.55);
+@define-color cuckoo_edge rgba(255, 255, 255, 0.08);
+@define-color cuckoo_edge_focus rgba(255, 255, 255, 0.18);
+@define-color cuckoo_text #dce3ea;
+@define-color cuckoo_soft #6e7a88;
+@define-color cuckoo_name #aeb8c4;
+@define-color cuckoo_button #b6c4cc;
+@define-color cuckoo_arrow #11171e;
+
+/* The wallpaper is the whole background, so the panel around the login is gone */
+frame.background {
+    background: none;
+    border: none;
+    box-shadow: none;
+}
+
+/* Password box, with the lock drawn on the left side */
+.cuckoo-password {
+    min-height: 52px;
+    padding-left: 48px;
+    padding-right: 56px;
+    border: 1px solid @cuckoo_edge;
+    border-radius: 6px;
+    box-shadow: none;
+    background-color: @cuckoo_box;
+    background-image: url("file:///usr/share/cuckoo/lock.svg");
+    background-repeat: no-repeat;
+    background-position: 18px center;
+    color: @cuckoo_text;
+    font-size: 16px;
+}
+
+.cuckoo-password:focus,
+.cuckoo-password:focus-within {
+    border-color: @cuckoo_edge_focus;
+}
+
+.cuckoo-password text {
+    background: none;
+    color: @cuckoo_text;
+}
+
+.cuckoo-password placeholder {
+    color: @cuckoo_soft;
+}
+
+/* Round button that sits inside the password box */
+.cuckoo-submit {
+    min-width: 34px;
+    min-height: 34px;
+    margin-right: 9px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    box-shadow: none;
+    background-color: @cuckoo_button;
+    color: @cuckoo_arrow;
+}
+
+.cuckoo-submit:hover {
+    background-color: #c9d5dc;
+}
+
+/* Name under the password box, plain text with a small arrow */
+.cuckoo-user,
+.cuckoo-user button {
+    min-height: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: none;
+    color: @cuckoo_name;
+    font-size: 14px;
+}
+
+.cuckoo-user button:disabled,
+.cuckoo-user button:disabled label {
+    color: @cuckoo_name;
+}
+
+/* With a single user there is nothing to pick */
+.cuckoo-only-user arrow {
+    -gtk-icon-source: none;
+    min-width: 0;
+}
+
+/* Time and date, top right corner */
+.cuckoo-clock {
+    margin-top: 28px;
+    margin-right: 36px;
+    border: none;
+    box-shadow: none;
+    background: none;
+}
+
+.cuckoo-clock label {
+    color: @cuckoo_soft;
+    font-size: 14px;
+}
