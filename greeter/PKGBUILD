@@ -14,12 +14,17 @@ makedepends=('cargo')
 provides=('greetd-regreet')
 conflicts=('greetd-regreet')
 _upstream="ReGreet-${pkgver}"
-source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs/tags/${pkgver}.tar.gz")
-sha256sums=('7e26799dffdede183fc62d12aedbda5fea92d7d9802a180755d8a1d1fd93f2f7')
+source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs/tags/${pkgver}.tar.gz"
+        "0001-cuckoo-login-layout.patch")
+sha256sums=('7e26799dffdede183fc62d12aedbda5fea92d7d9802a180755d8a1d1fd93f2f7'
+            'SKIP')
 
-# Download the crates first so the build itself needs no network.
+# Apply our changes, then download the crates so the build needs no network.
 prepare() {
     cd -- "${_upstream}"
+    for patch_file in "${srcdir}"/*.patch; do
+        patch -p1 < "${patch_file}"
+    done
     cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
 }
 
