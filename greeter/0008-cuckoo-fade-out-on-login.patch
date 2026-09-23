@@ -1,0 +1,79 @@
+diff --git a/src/gui/component.rs b/src/gui/component.rs
+index 3cced64..fa61142 100644
+--- a/src/gui/component.rs
++++ b/src/gui/component.rs
+@@ -185,6 +185,10 @@ impl AsyncComponent for Greeter {
+             #[name = "ui"]
+             #[template]
+             Ui {
++                // After a good login the style fades the whole screen out
++                #[track(model.updates.changed(Updates::leaving()))]
++                set_class_active: ("cuckoo-leaving", model.updates.leaving),
++
+                 #[template_child]
+                 background,
+ 
+@@ -509,6 +513,7 @@ impl AsyncComponent for Greeter {
+         self.updates.reset();
+ 
+         match msg {
++            Self::CommandOutput::Exit => std::process::exit(0),
+             Self::CommandOutput::ClearNotif(version) => {
+                 if self.updates.notif_ver == version {
+                     self.updates.set_notif_msg(None);
+diff --git a/src/gui/messages.rs b/src/gui/messages.rs
+index 582296c..73f0e47 100644
+--- a/src/gui/messages.rs
++++ b/src/gui/messages.rs
+@@ -67,6 +67,8 @@ pub enum InputMsg {
+ pub enum CommandMsg {
+     /// Clear the notification
+     ClearNotif(u32),
++    /// Close the greeter, once the fade out is done
++    Exit,
+     /// Handle a response received from greetd
+     HandleGreetdResponse(Response),
+     /// Notify the greeter that a monitor was removed.
+diff --git a/src/gui/model.rs b/src/gui/model.rs
+index b5c2df8..738f2bf 100644
+--- a/src/gui/model.rs
++++ b/src/gui/model.rs
+@@ -32,6 +32,8 @@ use super::{
+ };
+ 
+ const NOTIF_CLEAR_DELAY: u64 = 5;
++/// Time to close after a good login. It matches the fade out in the style, plus a little margin.
++const FADE_OUT_DELAY: Duration = Duration::from_millis(350);
+ 
+ #[derive(PartialEq)]
+ pub(super) enum InputMode {
+@@ -63,6 +65,8 @@ pub(super) struct Updates {
+     pub(super) time: String,
+     /// Monitor where the window is displayed
+     pub(super) monitor: Option<Monitor>,
++    /// Whether the login was good and the screen is fading out
++    pub(super) leaving: bool,
+ }
+ 
+ impl Updates {
+@@ -118,6 +122,7 @@ impl Greeter {
+             tracker: 0,
+             time: "".to_string(),
+             monitor: None,
++            leaving: false,
+         };
+         let greetd_client = Arc::new(Mutex::new(
+             GreetdClient::new(demo)
+@@ -610,7 +615,11 @@ impl Greeter {
+         match response {
+             Response::Success => {
+                 info!("Session successfully started");
+-                std::process::exit(0);
++                self.updates.set_leaving(true);
++                sender.oneshot_command(async {
++                    sleep(FADE_OUT_DELAY).await;
++                    CommandMsg::Exit
++                });
+             }
+ 
+             Response::AuthMessage { .. } => unimplemented!(),

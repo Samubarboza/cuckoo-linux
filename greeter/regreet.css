@@ -11,6 +11,20 @@
 @define-color cuckoo_error #e39a9a;
 @define-color cuckoo_error_edge rgba(227, 154, 154, 0.55);
 
+/* After a good login the screen fades to black, then the greeter closes.
+   The 300ms here go with the close delay in the greeter code. */
+window {
+    background-color: #000000;
+}
+
+window > overlay {
+    transition: opacity 300ms ease-out;
+}
+
+window > overlay.cuckoo-leaving {
+    opacity: 0;
+}
+
 /* The wallpaper is the whole background, so the panel around the login is gone */
 frame.background {
     background: none;
@@ -20,7 +34,7 @@ frame.background {
 
 /* Password box, with the lock drawn on the left side */
 .cuckoo-password {
-    min-height: 44px;
+    min-height: 42px;
     padding-left: 42px;
     padding-right: 48px;
     border: 1px solid @cuckoo_edge;

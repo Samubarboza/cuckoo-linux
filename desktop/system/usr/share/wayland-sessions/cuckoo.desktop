@@ -1,0 +1,8 @@
+# Hyprland session for Cuckoo Linux.
+# Its output goes to the journal, so nothing shows on screen at login.
+[Desktop Entry]
+Name=Cuckoo
+Comment=Hyprland for Cuckoo Linux
+Exec=systemd-cat --identifier=hyprland /usr/bin/start-hyprland
+Type=Application
+DesktopNames=Hyprland
