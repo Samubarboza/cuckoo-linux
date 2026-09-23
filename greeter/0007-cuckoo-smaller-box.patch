@@ -7,7 +7,7 @@ index 613aa72..df93046 100644
                      set_margin_top: 15,
                      set_row_spacing: 15,
 -                    set_width_request: 500,
-+                    set_width_request: 380,
++                    set_width_request: 350,
  
                      /// Widget to display messages to the user
                      #[name = "message_label"]
