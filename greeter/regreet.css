@@ -34,9 +34,12 @@ frame.background {
     font-size: 15px;
 }
 
+/* GTK draws a blue ring on focus, here the edge only gets a bit lighter */
 .cuckoo-password:focus,
 .cuckoo-password:focus-within {
     border-color: @cuckoo_edge_focus;
+    outline: none;
+    box-shadow: none;
 }
 
 /* While a message is on screen, the box edge turns soft red */
@@ -60,6 +63,11 @@ frame.background {
     color: @cuckoo_soft;
 }
 
+.cuckoo-password text selection {
+    background-color: @cuckoo_edge_focus;
+    color: @cuckoo_text;
+}
+
 /* Round button that sits inside the password box */
 .cuckoo-submit {
     min-width: 30px;
@@ -75,6 +83,13 @@ frame.background {
 
 .cuckoo-submit:hover {
     background-color: #c9d5dc;
+}
+
+/* Moving with Tab still shows where you are, in the Cuckoo colors */
+.cuckoo-submit:focus-visible,
+.cuckoo-user button:focus-visible {
+    outline: 2px solid @cuckoo_edge_focus;
+    outline-offset: 2px;
 }
 
 /* Name under the password box, plain text with a small arrow */
