@@ -1,0 +1,13 @@
+diff --git a/src/gui/templates.rs b/src/gui/templates.rs
+index 613aa72..df93046 100644
+--- a/src/gui/templates.rs
++++ b/src/gui/templates.rs
+@@ -54,7 +54,7 @@ impl WidgetTemplate for Ui {
+                     set_margin_start: 15,
+                     set_margin_top: 15,
+                     set_row_spacing: 15,
+-                    set_width_request: 500,
++                    set_width_request: 380,
+ 
+                     /// Widget to display messages to the user
+                     #[name = "message_label"]

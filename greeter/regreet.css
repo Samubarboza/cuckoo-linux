@@ -20,18 +20,18 @@ frame.background {
 
 /* Password box, with the lock drawn on the left side */
 .cuckoo-password {
-    min-height: 52px;
-    padding-left: 48px;
-    padding-right: 56px;
+    min-height: 44px;
+    padding-left: 42px;
+    padding-right: 48px;
     border: 1px solid @cuckoo_edge;
     border-radius: 6px;
     box-shadow: none;
     background-color: @cuckoo_box;
     background-image: url("file:///usr/share/cuckoo/lock.svg");
     background-repeat: no-repeat;
-    background-position: 18px center;
+    background-position: 16px center;
     color: @cuckoo_text;
-    font-size: 16px;
+    font-size: 15px;
 }
 
 .cuckoo-password:focus,
@@ -62,9 +62,9 @@ frame.background {
 
 /* Round button that sits inside the password box */
 .cuckoo-submit {
-    min-width: 34px;
-    min-height: 34px;
-    margin-right: 9px;
+    min-width: 30px;
+    min-height: 30px;
+    margin-right: 7px;
     padding: 0;
     border: none;
     border-radius: 999px;
