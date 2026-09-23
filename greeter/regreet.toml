@@ -4,6 +4,9 @@
 # Ask for the password right away, without picking user or session.
 skip_selection = true
 
+# Hyprland ships two sessions and the other one does not start, so we name ours.
+session = "Hyprland"
+
 [background]
 path = "/usr/share/backgrounds/cuckoo/cuckoo.png"
 fit = "Cover"

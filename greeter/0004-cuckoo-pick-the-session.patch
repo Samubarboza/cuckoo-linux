@@ -1,0 +1,56 @@
+diff --git a/src/config.rs b/src/config.rs
+index ee5528c..bbb789d 100644
+--- a/src/config.rs
++++ b/src/config.rs
+@@ -129,6 +129,10 @@ pub struct Config {
+     #[serde(default)]
+     skip_selection: bool,
+ 
++    /// Name of the session to always use, as written in its desktop file
++    #[serde(default)]
++    session: Option<String>,
++
+     #[serde(default)]
+     appearance: AppearanceSettings,
+ 
+@@ -186,4 +190,8 @@ impl Config {
+     pub fn skip_selection(&self) -> bool {
+         self.skip_selection
+     }
++
++    pub fn get_session(&self) -> Option<&str> {
++        self.session.as_deref()
++    }
+ }
+diff --git a/src/gui/component.rs b/src/gui/component.rs
+index cd00b00..c4fb322 100644
+--- a/src/gui/component.rs
++++ b/src/gui/component.rs
+@@ -85,6 +85,16 @@ fn setup_users_sessions(model: &Greeter, widgets: &GreeterWidgets) {
+         widgets.ui.sessions_box.append(Some(session), session);
+     }
+ 
++    // The sessions come from a map with no order, so without this the greeter picks a
++    // random one when the system offers more than one.
++    if let Some(wanted_session) = model.config.get_session() {
++        if model.sys_util.get_sessions().contains_key(wanted_session) {
++            initial_session = Some(wanted_session.to_string());
++        } else {
++            warn!("Session '{wanted_session}' from the config was not found");
++        }
++    }
++
+     // With only one user there is nothing to pick, so the style hides the arrow.
+     if model.sys_util.get_users().len() < 2 {
+         widgets.ui.usernames_box.add_css_class("cuckoo-only-user");
+@@ -111,8 +121,9 @@ fn setup_users_sessions(model: &Greeter, widgets: &GreeterWidgets) {
+     // If there's no last-used session for the initial user, then the sessions box won't have
+     // anything chosen, and thus remain empty. So detect this case (which should be
+     // mutually-exclusive) with setting the initial user as above.
++    // A session named in the config also wins over the cached one.
+     if let Some(user) = &initial_username {
+-        if !model.cache.has_last_session(user)
++        if (model.config.get_session().is_some() || !model.cache.has_last_session(user))
+             && initial_session.is_some()
+             && !widgets
+                 .ui
