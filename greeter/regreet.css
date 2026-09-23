@@ -1,0 +1,140 @@
+/* Look of the Cuckoo login screen. */
+
+@define-color cuckoo_box rgba(23, 30, 40, 0.55);
+@define-color cuckoo_edge rgba(255, 255, 255, 0.08);
+@define-color cuckoo_edge_focus rgba(255, 255, 255, 0.18);
+@define-color cuckoo_text #dce3ea;
+@define-color cuckoo_soft #6e7a88;
+@define-color cuckoo_name #aeb8c4;
+@define-color cuckoo_button #b6c4cc;
+@define-color cuckoo_arrow #11171e;
+@define-color cuckoo_error #e39a9a;
+@define-color cuckoo_error_edge rgba(227, 154, 154, 0.55);
+
+/* The wallpaper is the whole background, so the panel around the login is gone */
+frame.background {
+    background: none;
+    border: none;
+    box-shadow: none;
+}
+
+/* Password box, with the lock drawn on the left side */
+.cuckoo-password {
+    min-height: 44px;
+    padding-left: 42px;
+    padding-right: 48px;
+    border: 1px solid @cuckoo_edge;
+    border-radius: 6px;
+    box-shadow: none;
+    background-color: @cuckoo_box;
+    background-image: url("file:///usr/share/cuckoo/lock.svg");
+    background-repeat: no-repeat;
+    background-position: 16px center;
+    color: @cuckoo_text;
+    font-size: 15px;
+}
+
+/* GTK draws a blue ring on focus, here the edge only gets a bit lighter */
+.cuckoo-password:focus,
+.cuckoo-password:focus-within {
+    border-color: @cuckoo_edge_focus;
+    outline: none;
+    box-shadow: none;
+}
+
+/* While a message is on screen, the box edge turns soft red */
+.cuckoo-password.cuckoo-error,
+.cuckoo-password.cuckoo-error:focus-within {
+    border-color: @cuckoo_error_edge;
+}
+
+/* Message under the user name, plain text without a box */
+.cuckoo-message {
+    color: @cuckoo_error;
+    font-size: 13px;
+}
+
+.cuckoo-password text {
+    background: none;
+    color: @cuckoo_text;
+}
+
+.cuckoo-password placeholder {
+    color: @cuckoo_soft;
+}
+
+.cuckoo-password text selection {
+    background-color: @cuckoo_edge_focus;
+    color: @cuckoo_text;
+}
+
+/* Round button that sits inside the password box.
+   The GTK theme paints its own image over the color, so it goes away. */
+.cuckoo-submit,
+.cuckoo-submit:hover,
+.cuckoo-submit:active {
+    min-width: 30px;
+    min-height: 30px;
+    margin-right: 7px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    box-shadow: none;
+    text-shadow: none;
+    -gtk-icon-shadow: none;
+    background-image: none;
+    background-color: @cuckoo_button;
+    color: @cuckoo_arrow;
+}
+
+.cuckoo-submit:hover {
+    background-color: #c9d5dc;
+}
+
+.cuckoo-submit:active {
+    background-color: #a3b1ba;
+}
+
+/* Moving with Tab still shows where you are, in the Cuckoo colors */
+.cuckoo-submit:focus-visible,
+.cuckoo-user button:focus-visible {
+    outline: 2px solid @cuckoo_edge_focus;
+    outline-offset: 2px;
+}
+
+/* Name under the password box, plain text with a small arrow */
+.cuckoo-user,
+.cuckoo-user button {
+    min-height: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: none;
+    color: @cuckoo_name;
+    font-size: 14px;
+}
+
+.cuckoo-user button:disabled,
+.cuckoo-user button:disabled label {
+    color: @cuckoo_name;
+}
+
+/* With a single user there is nothing to pick */
+.cuckoo-only-user arrow {
+    -gtk-icon-source: none;
+    min-width: 0;
+}
+
+/* Time and date, top right corner */
+.cuckoo-clock {
+    margin-top: 28px;
+    margin-right: 36px;
+    border: none;
+    box-shadow: none;
+    background: none;
+}
+
+.cuckoo-clock label {
+    color: @cuckoo_soft;
+    font-size: 14px;
+}

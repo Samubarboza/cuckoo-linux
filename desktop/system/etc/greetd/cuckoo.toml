@@ -1,8 +1,0 @@
-# Login screen for Cuckoo Linux.
-
-[terminal]
-vt = 1
-
-[default_session]
-command = "tuigreet --issue --time --remember --cmd Hyprland --theme 'text=white;time=darkgray;container=black;border=darkgray;title=white;greet=white;prompt=lightyellow;input=white;action=darkgray;button=lightyellow'"
-user = "greeter"

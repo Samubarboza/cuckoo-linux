@@ -1,7 +1,7 @@
 # Maintainer: Samubarboza <samubjunior95@gmail.com>
 
 pkgname=cuckoo-desktop
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="Desktop settings for Cuckoo Linux"
 arch=('any')
@@ -14,5 +14,5 @@ package() {
     install -d -m 0755 -- "${pkgdir}/etc/skel/.config"
     cp -r --no-preserve=ownership -- "${startdir}/config/." "${pkgdir}/etc/skel/.config/"
     cp -r --no-preserve=ownership -- "${startdir}/system/." "${pkgdir}/"
-    chmod -R u=rwX,go=rX -- "${pkgdir}/etc"
+    chmod -R u=rwX,go=rX -- "${pkgdir}/etc" "${pkgdir}/usr"
 }

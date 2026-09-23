@@ -1,0 +1,9 @@
+# Tells greetd to open the Cuckoo login screen.
+# cage is a tiny compositor: the login screen needs one to draw on.
+
+[terminal]
+vt = 1
+
+[default_session]
+command = "cage -s -- regreet"
+user = "greeter"

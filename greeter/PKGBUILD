@@ -1,0 +1,69 @@
+# Maintainer: Samubarboza <samubjunior95@gmail.com>
+
+# Login screen for Cuckoo Linux, built from ReGreet.
+# The version follows the ReGreet release we build from.
+pkgname=cuckoo-greeter
+pkgver=0.5.0
+pkgrel=1
+pkgdesc="Login screen for Cuckoo Linux"
+arch=('x86_64')
+url="https://github.com/Samubarboza/cuckoo-linux"
+license=('GPL-3.0-or-later')
+depends=('greetd' 'cage' 'gtk4' 'accountsservice' 'glib2' 'pango' 'cairo' 'gdk-pixbuf2' 'librsvg')
+makedepends=('cargo')
+provides=('greetd-regreet')
+conflicts=('greetd-regreet')
+backup=('etc/greetd/cuckoo.toml' 'etc/greetd/regreet.toml' 'etc/greetd/regreet.css')
+_upstream="ReGreet-${pkgver}"
+source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs/tags/${pkgver}.tar.gz"
+        "0001-cuckoo-login-layout.patch"
+        "0002-cuckoo-only-one-user.patch"
+        "0003-cuckoo-ask-password-first.patch"
+        "0004-cuckoo-pick-the-session.patch"
+        "0005-cuckoo-plain-messages.patch"
+        "0006-cuckoo-message-under-the-box.patch"
+        "0007-cuckoo-smaller-box.patch"
+        "cuckoo.toml"
+        "regreet.toml"
+        "regreet.css"
+        "lock.svg"
+        "greetd-override.conf")
+sha256sums=('7e26799dffdede183fc62d12aedbda5fea92d7d9802a180755d8a1d1fd93f2f7'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            'SKIP')
+
+# Apply our changes, then download the crates so the build needs no network.
+prepare() {
+    cd -- "${_upstream}"
+    for patch_file in "${srcdir}"/*.patch; do
+        patch -p1 < "${patch_file}"
+    done
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
+}
+
+build() {
+    cd -- "${_upstream}"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo build --frozen --release
+}
+
+package() {
+    install -Dm 0755 -- "${_upstream}/target/release/regreet" "${pkgdir}/usr/bin/regreet"
+    install -Dm 0644 -- "${_upstream}/systemd-tmpfiles.conf" "${pkgdir}/usr/lib/tmpfiles.d/regreet.conf"
+    install -Dm 0644 -- "cuckoo.toml" "${pkgdir}/etc/greetd/cuckoo.toml"
+    install -Dm 0644 -- "regreet.toml" "${pkgdir}/etc/greetd/regreet.toml"
+    install -Dm 0644 -- "regreet.css" "${pkgdir}/etc/greetd/regreet.css"
+    install -Dm 0644 -- "lock.svg" "${pkgdir}/usr/share/cuckoo/lock.svg"
+    install -Dm 0644 -- "greetd-override.conf" \
+        "${pkgdir}/usr/lib/systemd/system/greetd.service.d/cuckoo.conf"
+}
