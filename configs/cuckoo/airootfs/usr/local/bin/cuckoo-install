@@ -233,7 +233,7 @@ password="$(read_answer password)"
 timezone="$(read_answer timezone)"
 terminal="$(read_answer terminal)"
 
-base_packages+=(hyprland "${terminal}" greetd)
+base_packages+=(hyprland swaybg "${terminal}" greetd)
 
 [[ -b "${disk}" ]] || fail "'${disk}' is not a disk."
 if findmnt --source "${disk}" &>/dev/null || findmnt "${disk}"* &>/dev/null; then
