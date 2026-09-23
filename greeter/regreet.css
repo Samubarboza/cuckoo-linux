@@ -68,8 +68,11 @@ frame.background {
     color: @cuckoo_text;
 }
 
-/* Round button that sits inside the password box */
-.cuckoo-submit {
+/* Round button that sits inside the password box.
+   The GTK theme paints its own image over the color, so it goes away. */
+.cuckoo-submit,
+.cuckoo-submit:hover,
+.cuckoo-submit:active {
     min-width: 30px;
     min-height: 30px;
     margin-right: 7px;
@@ -77,12 +80,19 @@ frame.background {
     border: none;
     border-radius: 999px;
     box-shadow: none;
+    text-shadow: none;
+    -gtk-icon-shadow: none;
+    background-image: none;
     background-color: @cuckoo_button;
     color: @cuckoo_arrow;
 }
 
 .cuckoo-submit:hover {
     background-color: #c9d5dc;
+}
+
+.cuckoo-submit:active {
+    background-color: #a3b1ba;
 }
 
 /* Moving with Tab still shows where you are, in the Cuckoo colors */
