@@ -21,12 +21,14 @@ source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs
         "0003-cuckoo-ask-password-first.patch"
         "0004-cuckoo-pick-the-session.patch"
         "0005-cuckoo-plain-messages.patch"
+        "0006-cuckoo-message-under-the-box.patch"
         "cuckoo.toml"
         "regreet.toml"
         "regreet.css"
         "lock.svg"
         "greetd-override.conf")
 sha256sums=('7e26799dffdede183fc62d12aedbda5fea92d7d9802a180755d8a1d1fd93f2f7'
+            'SKIP'
             'SKIP'
             'SKIP'
             'SKIP'

@@ -1,0 +1,245 @@
+diff --git a/src/gui/component.rs b/src/gui/component.rs
+index c4fb322..3cced64 100644
+--- a/src/gui/component.rs
++++ b/src/gui/component.rs
+@@ -243,6 +243,15 @@ impl AsyncComponent for Greeter {
+                 secret_entry {
+                     #[track(model.updates.changed(Updates::input_mode()))]
+                     set_visible: model.updates.input_mode == InputMode::Secret,
++                    // The box turns red while a message is on screen
++                    #[track(model.updates.changed(Updates::notif_msg()))]
++                    set_class_active: ("cuckoo-error", model.updates.notif_msg.is_some()),
++                    // The first key typed hides the message; the empty text comes from a reset
++                    connect_changed[sender] => move |this| {
++                        if !this.text().is_empty() {
++                            sender.input(Self::Input::PasswordTyped);
++                        }
++                    },
+                     #[track(
+                         model.updates.changed(Updates::input_mode())
+                         && model.updates.input_mode == InputMode::Secret
+@@ -340,13 +349,6 @@ impl AsyncComponent for Greeter {
+                     }
+                 },
+                 #[template_child]
+-                notif_info {
+-                    #[track(model.updates.changed(Updates::notif_msg()))]
+-                    set_revealed: model.updates.notif_msg.is_some(),
+-                    #[track(model.updates.changed(Updates::notif_type()))]
+-                    set_message_type: model.updates.notif_type,
+-                },
+-                #[template_child]
+                 notif_label {
+                     #[track(model.updates.changed(Updates::notif_msg()))]
+                     set_label: model.updates.notif_msg.as_ref().unwrap_or(&"".to_string()),
+@@ -378,10 +380,6 @@ impl AsyncComponent for Greeter {
+         let mut model = Self::new(&input.config_path, input.demo).await;
+         let widgets = view_output!();
+ 
+-        // Make the notification bar permanently visible, since it was made invisible during init.
+-        // The actual visuals are controlled by `InfoBar::set_revealed`.
+-        widgets.ui.notif_info.set_visible(true);
+-
+         // cfg directives don't work inside Relm4 view! macro.
+         widgets
+             .ui
+@@ -478,6 +476,11 @@ impl AsyncComponent for Greeter {
+                 self.login_click_handler(&sender, input).await
+             }
+             Self::Input::Cancel => self.cancel_click_handler().await,
++            Self::Input::PasswordTyped => {
++                if self.updates.notif_msg.is_some() {
++                    self.updates.set_notif_msg(None);
++                }
++            }
+             Self::Input::UserChanged(info) => {
+                 self.sess_info = Some(info);
+                 self.user_change_handler();
+diff --git a/src/gui/messages.rs b/src/gui/messages.rs
+index ad1a756..582296c 100644
+--- a/src/gui/messages.rs
++++ b/src/gui/messages.rs
+@@ -50,6 +50,8 @@ pub enum InputMsg {
+     },
+     /// Cancel the login request
+     Cancel,
++    /// The user typed in the password box.
++    PasswordTyped,
+     /// The current user was changed in the GUI.
+     UserChanged(UserSessInfo),
+     /// Toggle manual entry of user.
+diff --git a/src/gui/model.rs b/src/gui/model.rs
+index a84ac16..b5c2df8 100644
+--- a/src/gui/model.rs
++++ b/src/gui/model.rs
+@@ -14,7 +14,6 @@ use greetd_ipc::{AuthMessageType, ErrorType, Response};
+ use relm4::{
+     AsyncComponentSender, Component, Controller,
+     gtk::{
+-        MessageType,
+         gdk::{Display, Monitor},
+         prelude::*,
+     },
+@@ -46,8 +45,6 @@ pub(super) enum InputMode {
+ pub(super) struct Updates {
+     /// Notification message to be shown to the user below the prompt
+     pub(super) notif_msg: Option<String>,
+-    /// Type of the notification to be shown to the user
+-    pub(super) notif_type: MessageType,
+     /// Notification timer version: prevents earlier timer clearing out later notifications
+     pub(super) notif_ver: u32,
+     /// Text in the password field
+@@ -111,7 +108,6 @@ impl Greeter {
+ 
+         let updates = Updates {
+             notif_msg: None,
+-            notif_type: MessageType::Info,
+             notif_ver: 0,
+             input: String::new(),
+             manual_user_mode: false,
+@@ -378,7 +374,13 @@ impl Greeter {
+ 
+                 // In case this is an authentication error (e.g. wrong password), the session should be cancelled.
+                 if let ErrorType::AuthError = error_type {
+-                    self.cancel_click_handler().await
++                    let was_asking_password = self.updates.is_input();
++                    self.cancel_click_handler().await;
++                    // Start again so the password box stays on screen. Only after a password,
++                    // so an account that fails before asking does not loop forever.
++                    if was_asking_password {
++                        Box::pin(self.create_session(sender)).await;
++                    }
+                 }
+                 return;
+             }
+@@ -441,7 +443,12 @@ impl Greeter {
+                 self.start_session(sender).await;
+             }
+             AuthStatus::InProgress => {
+-                self.send_input(sender, input).await;
++                // An empty password never reaches the system, the user gets told right away
++                if input.is_empty() && self.updates.input_mode == InputMode::Secret {
++                    self.display_info(sender, texts::empty_password(), "Empty password, not sent");
++                } else {
++                    self.send_input(sender, input).await;
++                }
+             }
+             AuthStatus::NotStarted => {
+                 self.create_session(sender).await;
+@@ -638,7 +645,6 @@ impl Greeter {
+         display_text: &str,
+         log_text: &str,
+     ) {
+-        self.updates.set_notif_type(MessageType::Error);
+         error!("{log_text}");
+         self.display_notif(sender, display_text);
+     }
+diff --git a/src/gui/templates.rs b/src/gui/templates.rs
+index d91fd70..613aa72 100644
+--- a/src/gui/templates.rs
++++ b/src/gui/templates.rs
+@@ -6,7 +6,7 @@
+ #![allow(dead_code)] // Silence dead code warnings for UI code that isn't dead
+ 
+ use gtk::prelude::*;
+-use relm4::{RelmWidgetExt, WidgetTemplate, gtk};
++use relm4::{WidgetTemplate, gtk};
+ 
+ use super::texts::password_placeholder;
+ 
+@@ -113,32 +113,39 @@ impl WidgetTemplate for Ui {
+                         add_css_class: "cuckoo-user",
+                     },
+ 
++                    /// Message for the user, right under the name, where they are looking
++                    #[name = "notif_label"]
++                    attach[0, 3, 1, 1] = &gtk::Label {
++                        set_halign: gtk::Align::Center,
++                        add_css_class: "cuckoo-message",
++                    },
++
+                     /// Widgets kept hidden: Cuckoo asks for the password and nothing else
+                     #[name = "session_label"]
+                     #[template]
+-                    attach[0, 3, 1, 1] = &EntryLabel { set_visible: false },
++                    attach[0, 4, 1, 1] = &EntryLabel { set_visible: false },
+ 
+                     #[name = "input_label"]
+                     #[template]
+-                    attach[0, 3, 1, 1] = &EntryLabel { set_visible: false },
++                    attach[0, 4, 1, 1] = &EntryLabel { set_visible: false },
+ 
+                     #[name = "username_entry"]
+-                    attach[0, 3, 1, 1] = &gtk::Entry { set_visible: false },
++                    attach[0, 4, 1, 1] = &gtk::Entry { set_visible: false },
+ 
+                     #[name = "sessions_box"]
+-                    attach[0, 3, 1, 1] = &gtk::ComboBoxText { set_visible: false },
++                    attach[0, 4, 1, 1] = &gtk::ComboBoxText { set_visible: false },
+ 
+                     #[name = "session_entry"]
+-                    attach[0, 3, 1, 1] = &gtk::Entry { set_visible: false },
++                    attach[0, 4, 1, 1] = &gtk::Entry { set_visible: false },
+ 
+                     #[name = "user_toggle"]
+-                    attach[0, 3, 1, 1] = &gtk::ToggleButton { set_visible: false },
++                    attach[0, 4, 1, 1] = &gtk::ToggleButton { set_visible: false },
+ 
+                     #[name = "sess_toggle"]
+-                    attach[0, 3, 1, 1] = &gtk::ToggleButton { set_visible: false },
++                    attach[0, 4, 1, 1] = &gtk::ToggleButton { set_visible: false },
+ 
+                     #[name = "cancel_button"]
+-                    attach[0, 3, 1, 1] = &gtk::Button { set_visible: false },
++                    attach[0, 4, 1, 1] = &gtk::Button { set_visible: false },
+                 },
+             },
+ 
+@@ -159,32 +166,6 @@ impl WidgetTemplate for Ui {
+                 set_margin_bottom: 15,
+                 set_spacing: 15,
+ 
+-                gtk::Frame {
+-                    inline_css: "
+-                        border: none;
+-                    ",
+-
+-                    /// Notification bar for messages
+-                    #[name = "notif_info"]
+-                    gtk::InfoBar {
+-                        // During init, the info bar closing animation is shown. To hide that, make
+-                        // it invisible. Later, the code will permanently make it visible, so that
+-                        // `InfoBar::set_revealed` will work properly with animations.
+-                        set_visible: false,
+-                        set_message_type: gtk::MessageType::Info,
+-
+-                        /// The actual notification message
+-                        #[name = "notif_label"]
+-                        gtk::Label {
+-                            set_halign: gtk::Align::Center,
+-                            set_margin_top: 10,
+-                            set_margin_bottom: 10,
+-                            set_margin_start: 10,
+-                            set_margin_end: 10,
+-                        },
+-                    }
+-                },
+-
+                 /// Collection of buttons that close the greeter (eg. Reboot)
+                 gtk::Box {
+                     set_visible: false,
+diff --git a/src/gui/texts.rs b/src/gui/texts.rs
+index 894770e..23dc96a 100644
+--- a/src/gui/texts.rs
++++ b/src/gui/texts.rs
+@@ -14,6 +14,10 @@ pub fn password_placeholder() -> &'static str {
+     if is_spanish() { "Contraseña" } else { "Password" }
+ }
+ 
++pub fn empty_password() -> &'static str {
++    if is_spanish() { "Escribe tu contraseña" } else { "Enter your password" }
++}
++
+ pub fn wrong_password() -> &'static str {
+     if is_spanish() { "Contraseña incorrecta" } else { "Wrong password" }
+ }

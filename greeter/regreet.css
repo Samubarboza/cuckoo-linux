@@ -8,6 +8,8 @@
 @define-color cuckoo_name #aeb8c4;
 @define-color cuckoo_button #b6c4cc;
 @define-color cuckoo_arrow #11171e;
+@define-color cuckoo_error #e39a9a;
+@define-color cuckoo_error_edge rgba(227, 154, 154, 0.55);
 
 /* The wallpaper is the whole background, so the panel around the login is gone */
 frame.background {
@@ -35,6 +37,18 @@ frame.background {
 .cuckoo-password:focus,
 .cuckoo-password:focus-within {
     border-color: @cuckoo_edge_focus;
+}
+
+/* While a message is on screen, the box edge turns soft red */
+.cuckoo-password.cuckoo-error,
+.cuckoo-password.cuckoo-error:focus-within {
+    border-color: @cuckoo_error_edge;
+}
+
+/* Message under the user name, plain text without a box */
+.cuckoo-message {
+    color: @cuckoo_error;
+    font-size: 13px;
 }
 
 .cuckoo-password text {
