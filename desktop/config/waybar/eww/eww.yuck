@@ -94,7 +94,7 @@
             (wifi-network :network network)))))))
 
 ; Fondo invisible: un click en cualquier otra parte cierra el popup.
-; Es un boton real para que siempre reciba el click. Cubre tambien la barra (y -30px)
+; Es un boton real para que siempre reciba el click. Empieza debajo de la barra
 (defwidget backdrop-button []
   (button :class "popup-backdrop" :hexpand true :vexpand true
           :onclick "setsid -f '${EWW_CONFIG_DIR}/popup.sh' close"
@@ -103,7 +103,7 @@
 
 ; Se abre una copia por monitor (eww open --id), asi un click en cualquier pantalla cierra
 (defwindow popup-backdrop
-  :geometry (geometry :x "0px" :y "-30px" :width "100%" :height "2000px" :anchor "top left")
+  :geometry (geometry :x "0px" :y "0px" :width "100%" :height "2000px" :anchor "top left")
   :stacking "overlay"
   :exclusive false
   :focusable false
@@ -136,7 +136,7 @@
 
 ; Normal: sin teclado, asi los clicks en otros monitores tambien la cierran
 (defwindow wifi-popup
-  :geometry (geometry :x "0px" :y "-30px" :width "100%" :height "2000px" :anchor "top left")
+  :geometry (geometry :x "0px" :y "0px" :width "100%" :height "2000px" :anchor "top left")
   :stacking "overlay"
   :exclusive false
   :focusable false
@@ -144,7 +144,7 @@
 
 ; Misma ventana con teclado: solo se usa mientras se escribe una contraseña
 (defwindow wifi-popup-typing
-  :geometry (geometry :x "0px" :y "-30px" :width "100%" :height "2000px" :anchor "top left")
+  :geometry (geometry :x "0px" :y "0px" :width "100%" :height "2000px" :anchor "top left")
   :stacking "overlay"
   :exclusive false
   :focusable true
