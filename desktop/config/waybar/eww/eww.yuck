@@ -116,9 +116,9 @@
   :focusable false
   (media-popup))
 
-; Alineado al borde derecho del interruptor
+; popup.sh le da la x al abrir, alineado al borde derecho del interruptor
 (defwindow system-popup
-  :geometry (geometry :x "228px" :y "0px" :width "220px" :anchor "top right")
+  :geometry (geometry :x "0px" :y "0px" :width "220px" :anchor "top left")
   :stacking "overlay"
   :exclusive false
   :focusable false

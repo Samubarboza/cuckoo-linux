@@ -9,6 +9,9 @@ eww_command() { eww -c "$eww_config_dir" "$@"; }
 activity_file="${XDG_RUNTIME_DIR:-/tmp}/waybar-popup-activity"
 max_seconds_without_activity=30
 
+# Anchos de los popups que se ubican segun el click, los mismos de eww.yuck
+system_popup_width=220
+
 # El que esta sonando. Si nada suena (ej. pausaste Spotify), el ultimo que sono,
 # asi los botones no saltan a otro reproductor como el navegador
 last_player_file="${XDG_RUNTIME_DIR:-/tmp}/waybar-last-player"
@@ -126,7 +129,12 @@ open_popup() {
             eww_command open popup-backdrop --id "backdrop-$monitor_id" --screen "$monitor_id"
         fi
     done
-    eww_command open "$1-popup" --screen "$focused_monitor"
+    if [ "$1" = "system" ]; then
+        system_popup_x=$(find_popup_x_position "$system_popup_width" right)
+        eww_command open system-popup --screen "$focused_monitor" --pos "${system_popup_x}x0"
+    else
+        eww_command open "$1-popup" --screen "$focused_monitor"
+    fi
     eww_command update "$1_reveal=true"
     nudge_cursor
     watch_open_popup "$1" </dev/null >/dev/null 2>&1 &
