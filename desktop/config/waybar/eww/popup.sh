@@ -78,6 +78,22 @@ nudge_cursor() {
     hyprctl dispatch movecursor "$cursor_x" "$cursor_y" >/dev/null
 }
 
+# Posicion x del popup en el monitor con foco, segun el mouse. Usa medidas con zoom y
+# nunca se sale de la pantalla. Con "right" su borde derecho va con el del boton (16px)
+find_popup_x_position() {
+    popup_width="$1"
+    alignment="${2:-center}"
+    read -r cursor_x _ <<< "$(hyprctl cursorpos 2>/dev/null | tr -d ',')"
+    popup_x=$(hyprctl monitors -j 2>/dev/null | jq -r \
+        --argjson cursor_x "${cursor_x:-0}" --argjson popup_width "$popup_width" --arg alignment "$alignment" '
+        first(.[] | select(.focused)) as $monitor
+        | ((if $monitor.transform % 2 == 1 then $monitor.height else $monitor.width end) / $monitor.scale) as $screen_width
+        | ($cursor_x - $monitor.x) as $mouse_x
+        | (if $alignment == "right" then $mouse_x + 16 - $popup_width else $mouse_x - $popup_width / 2 end) as $x
+        | [[$x, $screen_width - $popup_width] | min, 0] | max | floor' 2>/dev/null)
+    echo "${popup_x:-0}"
+}
+
 open_popup() {
     if [ "$1" = "media" ]; then
         active_player=$(find_active_player)
