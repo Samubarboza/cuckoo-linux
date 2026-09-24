@@ -6,6 +6,7 @@
 (defvar wifi_password "")
 (defvar wifi_show_password false)
 (defvar wifi_connecting "")
+(defvar wifi_popup_x 0)
 (defpoll wifi_networks    :interval "6s" :initial "[]"      :run-while wifi_reveal "./wifi.sh list")
 (defpoll wifi_radio       :interval "3s" :initial "enabled" :run-while wifi_reveal "nmcli radio wifi")
 (defpoll wifi_autoconnect :interval "4s" :initial "none"    :run-while wifi_reveal "./wifi.sh autoconnect-state")
@@ -125,11 +126,12 @@
   (system-popup))
 
 ; Wifi: el fondo va dentro de la misma ventana (ocupa toda la pantalla) y la tarjeta
-; queda alineada al icono de wifi con margenes
+; queda bajo el icono de wifi, con la x que le da popup.sh al abrir
 (defwidget wifi-window-content []
   (overlay
     (backdrop-button)
-    (box :class "wifi-position" :halign "end" :valign "start"
+    (box :class "wifi-position" :halign "start" :valign "start"
+         :style "margin-left: ${wifi_popup_x}px;"
       (wifi-popup))))
 
 ; Normal: sin teclado, asi los clicks en otros monitores tambien la cierran
