@@ -1,0 +1,149 @@
+; Popups que se despliegan desde waybar: musica y sistema (CPU / RAM)
+(defvar media_reveal false)
+(defvar system_reveal false)
+(defvar wifi_reveal false)
+(defvar wifi_selected "")
+(defvar wifi_password "")
+(defvar wifi_show_password false)
+(defvar wifi_connecting "")
+(defpoll wifi_networks    :interval "6s" :initial "[]"      :run-while wifi_reveal "./wifi.sh list")
+(defpoll wifi_radio       :interval "3s" :initial "enabled" :run-while wifi_reveal "nmcli radio wifi")
+(defpoll wifi_autoconnect :interval "4s" :initial "none"    :run-while wifi_reveal "./wifi.sh autoconnect-state")
+(deflisten media_title  :initial "" "playerctl -F metadata --format '{{title}}' 2>/dev/null")
+(deflisten media_artist :initial "" "playerctl -F metadata --format '{{artist}}' 2>/dev/null")
+(deflisten media_status :initial "" "./popup.sh follow-status")
+
+; ── Musica ──
+; Todos los comandos van con setsid -f: eww corta en 200ms cualquier comando de un click,
+; y cerrar popups o conectar wifi tarda mas que eso
+(defwidget media-button [id icon action]
+  (button :class "popup-btn media-${id}" :onclick "setsid -f '${EWW_CONFIG_DIR}/popup.sh' ${action}"
+    (label :text icon)))
+
+(defwidget media-popup []
+  (revealer :reveal media_reveal :transition "slidedown" :duration "220ms"
+    (box :class "popup-card media-card" :orientation "v" :space-evenly false :spacing 8
+      (box :orientation "v" :space-evenly false :spacing 2
+        (label :class "popup-title"    :text media_title  :limit-width 30)
+        (label :class "popup-subtitle" :text media_artist :limit-width 34))
+      (box :orientation "h" :space-evenly true
+        (media-button :id "prev" :icon "󰒮" :action "previous")
+        (media-button :id "play" :icon {media_status == "Playing" ? "󰏤" : "󰐊"} :action "play-pause")
+        (media-button :id "next" :icon "󰒭" :action "next")
+        (media-button :id "quit" :icon "󰅖" :action "quit")))))
+
+; ── Sistema: CPU y RAM con barrita de uso ──
+(defwidget usage-row [icon name value detail]
+  (box :class "usage-row" :orientation "v" :space-evenly false :spacing 6
+    (box :orientation "h" :space-evenly false :spacing 10
+      (label :class "usage-icon" :text icon)
+      (label :class "usage-name" :text name :hexpand true :halign "start")
+      (label :class "usage-detail" :text detail)
+      (label :class "usage-value" :text "${round(value, 0)}%"))
+    (progress :class "usage-bar" :value value :orientation "h")))
+
+(defwidget system-popup []
+  (revealer :reveal system_reveal :transition "slidedown" :duration "220ms"
+    (box :class "popup-card system-card" :orientation "v" :space-evenly false :spacing 12
+      (usage-row :icon "󰍛" :name "CPU" :value {EWW_CPU.avg} :detail "")
+      (usage-row :icon "󰢮" :name "RAM" :value {EWW_RAM.used_mem_perc}
+                 :detail "${round(EWW_RAM.used_mem / 1073741824, 1)} / ${round(EWW_RAM.total_mem / 1073741824, 0)} GB"))))
+
+; ── Wifi: redes, switches y contraseña ──
+(defwidget toggle-switch [active onclick]
+  (eventbox :cursor "pointer" :onclick onclick :valign "center"
+    (box :class "switch ${active ? 'switch-on' : ''}" :orientation "h"
+      (box :class "switch-knob" :hexpand true :halign {active ? "end" : "start"}))))
+
+(defwidget wifi-network [network]
+  (box :orientation "v" :space-evenly false
+    (button :class "wifi-row ${network.active ? 'wifi-row-active' : ''}"
+            :onclick "setsid -f '${EWW_CONFIG_DIR}/wifi.sh' select ${network.id}"
+      (box :orientation "h" :space-evenly false :spacing 10
+        (label :class "wifi-signal" :text {network.icon})
+        (label :class "wifi-name" :text {network.ssid} :limit-width 20 :hexpand true :halign "start")
+        (label :class "wifi-state" :text {wifi_connecting == network.id ? "Conectando..." : network.active ? "󰄬" : ""})
+        (label :class "wifi-lock" :visible {network.secure} :text "󰌾")))
+    (revealer :reveal {wifi_selected == network.id} :transition "slidedown" :duration "180ms"
+      (box :class "wifi-password-box" :orientation "v" :space-evenly false :spacing 6
+        (label :class "popup-section" :text "Contraseña" :halign "start")
+        (box :class "wifi-password-field" :orientation "h" :space-evenly false :spacing 6
+          (input :class "wifi-password" :hexpand true :password {!wifi_show_password}
+                 :onchange "eww -c '${EWW_CONFIG_DIR}' update wifi_password='{}'; setsid -f '${EWW_CONFIG_DIR}/popup.sh' activity"
+                 :onaccept "setsid -f '${EWW_CONFIG_DIR}/wifi.sh' connect ${network.id} '{}'")
+          (button :class "wifi-eye" :onclick "eww -c '${EWW_CONFIG_DIR}' update wifi_show_password=${!wifi_show_password}"
+            (label :text {wifi_show_password ? "󰈉" : "󰈈"})))
+        (button :class "wifi-connect" :onclick "setsid -f '${EWW_CONFIG_DIR}/wifi.sh' connect ${network.id} '${wifi_password}'"
+          (label :text "Conectar"))))))
+
+(defwidget wifi-popup []
+  (revealer :reveal wifi_reveal :transition "slidedown" :duration "220ms"
+    (box :class "popup-card wifi-card" :orientation "v" :space-evenly false :spacing 10
+      (box :orientation "h" :space-evenly false
+        (label :class "popup-title" :text "Wi-Fi" :hexpand true :halign "start")
+        (toggle-switch :active {wifi_radio == "enabled"} :onclick "setsid -f '${EWW_CONFIG_DIR}/wifi.sh' toggle-radio"))
+      (box :orientation "h" :space-evenly false :visible {wifi_radio == "enabled" && wifi_autoconnect != "none"}
+        (label :class "wifi-option" :text "Conectar automáticamente" :hexpand true :halign "start")
+        (toggle-switch :active {wifi_autoconnect == "yes"} :onclick "setsid -f '${EWW_CONFIG_DIR}/wifi.sh' toggle-autoconnect"))
+      (box :class "popup-divider" :visible {wifi_radio == "enabled"})
+      (label :class "popup-section" :text "Redes" :halign "start" :visible {wifi_radio == "enabled"})
+      (scroll :vscroll true :hscroll false :height 250 :visible {wifi_radio == "enabled"}
+        (box :orientation "v" :space-evenly false :spacing 2
+          (for network in wifi_networks
+            (wifi-network :network network)))))))
+
+; Fondo invisible: un click en cualquier otra parte cierra el popup.
+; Es un boton real para que siempre reciba el click. Cubre tambien la barra (y -30px)
+(defwidget backdrop-button []
+  (button :class "popup-backdrop" :hexpand true :vexpand true
+          :onclick "setsid -f '${EWW_CONFIG_DIR}/popup.sh' close"
+          :onrightclick "setsid -f '${EWW_CONFIG_DIR}/popup.sh' close"
+          :onmiddleclick "setsid -f '${EWW_CONFIG_DIR}/popup.sh' close"))
+
+; Se abre una copia por monitor (eww open --id), asi un click en cualquier pantalla cierra
+(defwindow popup-backdrop
+  :geometry (geometry :x "0px" :y "-30px" :width "100%" :height "2000px" :anchor "top left")
+  :stacking "overlay"
+  :exclusive false
+  :focusable false
+  (backdrop-button))
+
+; Pegados debajo de la barra (la zona reservada de waybar ya empuja 30px)
+(defwindow media-popup
+  :geometry (geometry :x "130px" :y "0px" :width "280px" :anchor "top left")
+  :stacking "overlay"
+  :exclusive false
+  :focusable false
+  (media-popup))
+
+; Alineado al borde derecho del interruptor
+(defwindow system-popup
+  :geometry (geometry :x "228px" :y "0px" :width "220px" :anchor "top right")
+  :stacking "overlay"
+  :exclusive false
+  :focusable false
+  (system-popup))
+
+; Wifi: el fondo va dentro de la misma ventana (ocupa toda la pantalla) y la tarjeta
+; queda alineada al icono de wifi con margenes
+(defwidget wifi-window-content []
+  (overlay
+    (backdrop-button)
+    (box :class "wifi-position" :halign "end" :valign "start"
+      (wifi-popup))))
+
+; Normal: sin teclado, asi los clicks en otros monitores tambien la cierran
+(defwindow wifi-popup
+  :geometry (geometry :x "0px" :y "-30px" :width "100%" :height "2000px" :anchor "top left")
+  :stacking "overlay"
+  :exclusive false
+  :focusable false
+  (wifi-window-content))
+
+; Misma ventana con teclado: solo se usa mientras se escribe una contraseña
+(defwindow wifi-popup-typing
+  :geometry (geometry :x "0px" :y "-30px" :width "100%" :height "2000px" :anchor "top left")
+  :stacking "overlay"
+  :exclusive false
+  :focusable true
+  (wifi-window-content))

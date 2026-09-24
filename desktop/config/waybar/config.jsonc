@@ -1,0 +1,182 @@
+{
+  "reload_style_on_change": true,
+  "layer": "top",
+  "exclusive": true,
+  "position": "top",
+  "height": 30,
+  "margin-top": 0,
+  "margin-left": 0,
+  "margin-right": 0,
+  "margin-bottom": 0,
+  "spacing": 0,
+
+  // Izquierda: app activa + musica
+  "modules-left": ["hyprland/window", "mpris"],
+  // Centro: solo workspaces en uso
+  "modules-center": ["hyprland/workspaces"],
+  // Derecha: estilo macOS, fecha y hora al final
+  "modules-right": [
+    "group/tray-expander",
+    "custom/notification",
+    "custom/weather",
+    "network",
+    "pulseaudio",
+    "pulseaudio/slider",
+    "custom/control",
+    "battery",
+    "clock"
+  ],
+
+  // ═════════ App activa ═════════
+  "hyprland/window": {
+    "format": "{class}",
+    "max-length": 12,
+    "separate-outputs": true,
+    "rewrite": {
+      "^$": "Desktop",
+      "^dev\\.zed\\.Zed$": "Zed",
+      "^com\\.mitchellh\\.ghostty$": "Ghostty",
+      "^(.+)\\.(.+)\\.(.+)$": "$3",
+      "^org\\.(.+)$": "$1",
+      "^(.+)$": "$1"
+    }
+  },
+
+  // ═════════ Musica ═════════
+  "mpris": {
+    "format": "<span size='large'>{player_icon}</span>  {title}",
+    "format-paused": "<span size='large'>󰏤</span>  {title}",
+    "format-stopped": "",
+    "dynamic-order": ["title"],
+    "dynamic-len": 26,
+    "max-length": 32,
+    "interval": 1,
+    "player-icons": {
+      "default": "󰎆",
+      "spotify": "󰓇",
+      "firefox": "󰈹",
+      "brave": "󰖟",
+      "chromium": "󰖟"
+    },
+    "on-click": "~/.config/waybar/eww/popup.sh toggle media",
+    "on-click-middle": "playerctl play-pause",
+    "on-scroll-up": "playerctl next",
+    "on-scroll-down": "playerctl previous",
+    "tooltip": false
+  },
+
+  // ═════════ Workspaces ═════════
+  "hyprland/workspaces": {
+    "on-click": "activate",
+    "format": "{name}",
+    "all-outputs": false,
+    "active-only": false,
+    "show-special": false,
+    "persistent-workspaces": {},
+    "on-scroll-up": "hyprctl dispatch workspace e+1",
+    "on-scroll-down": "hyprctl dispatch workspace e-1"
+  },
+
+  // ═════════ Reloj + clima ═════════
+  "clock": {
+    "format": "{:%a %b %e  %H:%M}",
+    "format-alt": "{:%d/%m/%Y  %H:%M}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>",
+    "interval": 60,
+    "locale": "C.UTF-8",
+    "calendar": {
+      "mode": "month",
+      "mode-mon-col": 3,
+      "on-scroll": 1,
+      "format": {
+        "months": "<span color='#e6e6e6'><b>{}</b></span>",
+        "days": "<span color='#a0a0a0'>{}</span>",
+        "weekdays": "<span color='#707070'><b>{}</b></span>",
+        "today": "<span color='#ffffff'><b><u>{}</u></b></span>"
+      }
+    },
+    "actions": {
+      "on-click-right": "mode",
+      "on-scroll-up": "shift_up",
+      "on-scroll-down": "shift_down"
+    }
+  },
+  "custom/weather": {
+    "exec": "curl -s 'wttr.in?format=%c%t' 2>/dev/null | tr -d '+' | sed 's/%//'",
+    "interval": 1800,
+    "tooltip": true,
+    "exec-if": "ping -c1 wttr.in -W2 > /dev/null 2>&1"
+  },
+
+  // ═════════ Conexiones: solo iconos, detalle en tooltip ═════════
+
+  "network": {
+    "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+    "format-wifi": "<span size='large'></span>",
+    "format-ethernet": "<span size='large'>󰈀</span>",
+    "format-disconnected": "<span size='large'>󰤮</span>",
+    "tooltip-format-wifi": "{essid} ({frequency} GHz)\nSignal: {signalStrength}%\n⇣ {bandwidthDownBytes}  ⇡ {bandwidthUpBytes}",
+    "tooltip-format-ethernet": "Ethernet\n⇣ {bandwidthDownBytes}  ⇡ {bandwidthUpBytes}",
+    "tooltip-format-disconnected": "Disconnected",
+    "interval": 3,
+    "on-click": "~/.config/waybar/eww/popup.sh toggle wifi"
+  },
+  "pulseaudio": {
+    "format": "<span size='large'>{icon}</span>  {volume}%",
+    "format-muted": "<span size='large'>󰖁</span>  {volume}%",
+    "format-icons": {
+      "headphone": "󰋋",
+      "headset": "󰋎",
+      "default": ["󰕿", "󰖀", "󰕾"]
+    },
+    "on-click": "pavucontrol",
+    "on-click-right": "pamixer -t",
+    "scroll-step": 5,
+    "tooltip-format": "{desc}\nVolume: {volume}%"
+  },
+
+  "pulseaudio/slider": { "min": 0, "max": 100, "orientation": "horizontal" },
+
+  // ═════════ Sistema ═════════
+
+
+  "battery": {
+    "format": "{capacity}%  <span size='large'>{icon}</span>",
+    "format-charging": "{capacity}%  <span size='large'> </span>",
+    "format-icons": ["", "", "", "", ""],
+    "tooltip-format-discharging": "Discharging: {power:>1.1f}W\n{capacity}% — {timeTo}",
+    "tooltip-format-charging": "Charging: {power:>1.1f}W\n{capacity}% — {timeTo}",
+    "interval": 5,
+    "states": { "warning": 30, "critical": 15 }
+  },
+
+  // ═════════ Extras + notificaciones al final ═════════
+  "group/tray-expander": {
+    "orientation": "inherit",
+    "drawer": {
+      "transition-duration": 400,
+      "children-class": "tray-group-item",
+      "transition-left-to-right": false,
+      "click-to-reveal": true
+    },
+    "modules": ["custom/expand-icon", "tray"]
+  },
+  "custom/expand-icon": { "format": "<span size='large'>󰅁</span>", "tooltip": false },
+  "tray": { "icon-size": 16, "spacing": 10, "show-passive-items": true },
+  "custom/notification": {
+    "tooltip": false,
+    "format": "<span size='large'>{icon}</span>",
+    "format-icons": { "notification": "󰂚", "none": "󰂜", "dnd-notification": "󰂛", "dnd-none": "󰪑" },
+    "return-type": "json",
+    "exec-if": "command -v swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "escape": true
+  },
+  "custom/control": {
+    "format": "",
+    "tooltip": false,
+    "on-click": "~/.config/waybar/eww/popup.sh toggle system"
+  }
+}

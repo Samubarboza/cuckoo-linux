@@ -1,0 +1,126 @@
+/* ═══════════════════════════════════════════════════
+   Menu bar estilo macOS Tahoe: plano, transparente, limpio
+   ═══════════════════════════════════════════════════ */
+
+@define-color text   #ffffff;
+@define-color soft   rgba(255, 255, 255, 0.85);
+@define-color dim    rgba(255, 255, 255, 0.45);
+@define-color glass  rgba(255, 255, 255, 0.22);
+@define-color red    #ff6961;
+@define-color amber  #ffd60a;
+
+* {
+  font-family: "Adwaita Sans", "JetBrainsMono Nerd Font Propo", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: @text;
+  border: none;
+  min-height: 0;
+  background: transparent;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+window#waybar {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.10));
+}
+
+/* ── Izquierda: app en negrita + musica ──
+   Anchos fijos: el popup de musica (eww) se alinea con estas medidas */
+#window { font-weight: 700; padding: 0 16px; min-width: 98px; }
+window#waybar.empty #window { color: @soft; }
+#mpris         { color: @soft; padding: 0 12px; min-width: 256px; border-radius: 7px; margin: 3px 0; }
+#mpris:hover   { background: @glass; }
+#mpris.playing { color: @text; }
+#mpris.paused  { color: @dim; }
+
+/* ── Workspaces: minimalistas ── */
+#workspaces button {
+  all: initial;
+  font-family: "Adwaita Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: @dim;
+  min-width: 12px;
+  padding: 1px 8px;
+  margin: 5px 1px;
+  border-radius: 7px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease;
+}
+#workspaces button label { color: inherit; }
+#workspaces button:hover  { color: @text; background: rgba(255, 255, 255, 0.12); }
+#workspaces button.active { color: @text; background: @glass; }
+#workspaces button.urgent { color: @red; }
+
+/* ── Derecha: iconos sueltos con hover tipo macOS ── */
+#custom-expand-icon, #tray,
+#custom-notification, #custom-weather, #network, #pulseaudio,
+#custom-control, #battery, #clock {
+  padding: 0 8px;
+  margin: 3px 1px;
+  border-radius: 7px;
+  transition: background 0.2s ease;
+}
+
+#custom-expand-icon:hover, #custom-notification:hover, #custom-weather:hover,
+#network:hover, #pulseaudio:hover, #battery:hover, #clock:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+#custom-notification.notification { color: @amber; }
+
+/* Interruptor: igual que el resto, fondo solo con hover */
+#custom-control { font-size: 15px; padding: 0 9px; }
+#custom-control:hover { background: rgba(255, 255, 255, 0.14); }
+
+/* Anchos fijos: los popups de wifi e interruptor (eww) se alinean con estas medidas */
+#pulseaudio { min-width: 50px; }
+#battery { min-width: 58px; }
+#clock   { font-weight: 600; padding-right: 16px; min-width: 124px; }
+
+/* ── Slider de volumen fino ── */
+#pulseaudio-slider { min-width: 70px; padding: 0 8px 0 0; }
+#pulseaudio-slider trough {
+  min-height: 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.25);
+}
+#pulseaudio-slider highlight {
+  min-height: 3px;
+  border-radius: 3px;
+  background: #ffffff;
+}
+#pulseaudio-slider slider {
+  min-width: 10px;
+  min-height: 10px;
+  margin: -4px 0;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Estados ── */
+#network.disconnected { color: @dim; }
+#pulseaudio.muted     { color: @dim; }
+#battery.warning  { color: @amber; }
+#battery.critical { color: @red; animation: blink 1s ease-in-out infinite; }
+
+/* ── Tray ── */
+#tray > .passive { -gtk-icon-effect: dim; }
+#tray > .needs-attention { -gtk-icon-effect: highlight; }
+.tray-group-item { margin: 0 1px; }
+
+/* ── Tooltip ── */
+tooltip {
+  background: rgba(30, 30, 32, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+tooltip label { color: @text; font-size: 12px; text-shadow: none; }
+
+@keyframes blink {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.4; }
+  100% { opacity: 1; }
+}
