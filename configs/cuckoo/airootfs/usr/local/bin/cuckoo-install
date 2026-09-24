@@ -39,6 +39,8 @@ save_log_to_disk() {
     if [[ -d "${target_dir}/var/log" ]]; then
         cp -- "${log_file}" "${target_dir}/var/log/cuckoo-install.log" 2>/dev/null || true
     fi
+    # Write everything to the disk now, so turning off the computer loses nothing
+    sync
 }
 
 fail() {
@@ -301,6 +303,8 @@ if ! run_step --may-fail 'Installing your video drivers' install_hardware_driver
 fi
 
 save_log_to_disk
+# The data is already on the disk, so a failed unmount only goes to the log
+umount -R -- "${target_dir}" >>"${log_file}" 2>&1 || true
 
 # A clean screen for the last message
 printf '\033[2J\033[H'
