@@ -27,7 +27,7 @@ base_packages=(
     grub efibootmgr
     intel-ucode amd-ucode
     btrfs-progs
-    networkmanager
+    networkmanager wireless-regdb
     pipewire pipewire-pulse wireplumber
     bluez bluez-utils
     sudo git nano
