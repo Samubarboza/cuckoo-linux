@@ -213,13 +213,13 @@ write_archinstall_files() {
 }
 EOF
 
-    cat >"${answers_dir}/credentials.json" <<EOF
-{
-  "!users": [
-    { "username": "${username}", "!password": "${password}", "sudo": true, "groups": [] }
-  ]
-}
-EOF
+    # json escapes the quotes and backslashes of the password, a plain text file does not.
+    # The values go in the environment, so they are not shown in the process list.
+    CUCKOO_USERNAME="${username}" CUCKOO_PASSWORD="${password}" python3 -c '
+import json, os
+user = {"username": os.environ["CUCKOO_USERNAME"], "!password": os.environ["CUCKOO_PASSWORD"], "sudo": True, "groups": []}
+print(json.dumps({"!users": [user]}, indent=2))
+' >"${answers_dir}/credentials.json" || fail 'the user settings could not be written.'
     chmod 600 -- "${answers_dir}/credentials.json"
 }
 
