@@ -27,10 +27,11 @@ base_packages=(
     grub efibootmgr
     intel-ucode amd-ucode
     btrfs-progs
-    networkmanager
+    networkmanager wireless-regdb
     pipewire pipewire-pulse wireplumber
     bluez bluez-utils
     sudo git nano
+    python python-pip
 )
 
 # The log lives in memory and is lost on reboot, so keep a copy on the disk
@@ -38,6 +39,8 @@ save_log_to_disk() {
     if [[ -d "${target_dir}/var/log" ]]; then
         cp -- "${log_file}" "${target_dir}/var/log/cuckoo-install.log" 2>/dev/null || true
     fi
+    # Write everything to the disk now, so turning off the computer loses nothing
+    sync
 }
 
 fail() {
@@ -210,13 +213,13 @@ write_archinstall_files() {
 }
 EOF
 
-    cat >"${answers_dir}/credentials.json" <<EOF
-{
-  "!users": [
-    { "username": "${username}", "!password": "${password}", "sudo": true, "groups": [] }
-  ]
-}
-EOF
+    # json escapes the quotes and backslashes of the password, a plain text file does not.
+    # The values go in the environment, so they are not shown in the process list.
+    CUCKOO_USERNAME="${username}" CUCKOO_PASSWORD="${password}" python3 -c '
+import json, os
+user = {"username": os.environ["CUCKOO_USERNAME"], "!password": os.environ["CUCKOO_PASSWORD"], "sudo": True, "groups": []}
+print(json.dumps({"!users": [user]}, indent=2))
+' >"${answers_dir}/credentials.json" || fail 'the user settings could not be written.'
     chmod 600 -- "${answers_dir}/credentials.json"
 }
 
@@ -267,7 +270,7 @@ fi
 # Every line says what to do when it fails: inside a step, set -e does not stop the script
 install_desktop_package() {
     pacman --root "${target_dir}" --dbpath "${target_dir}/var/lib/pacman" \
-        --noconfirm -U -- "${desktop_packages_dir}"/cuckoo-{desktop,greeter}-[0-9]*.pkg.tar.zst || return 1
+        --noconfirm -U -- "${desktop_packages_dir}"/{cuckoo-desktop,cuckoo-greeter,eww}-[0-9]*.pkg.tar.zst || return 1
     # archinstall already made the user, so /etc/skel reached it too late
     arch-chroot "${target_dir}" cp -r --no-target-directory /etc/skel "/home/${username}" || return 1
     # The settings ship with a default terminal, put in the chosen one
@@ -300,6 +303,8 @@ if ! run_step --may-fail 'Installing your video drivers' install_hardware_driver
 fi
 
 save_log_to_disk
+# The data is already on the disk, so a failed unmount only goes to the log
+umount -R -- "${target_dir}" >>"${log_file}" 2>&1 || true
 
 # A clean screen for the last message
 printf '\033[2J\033[H'

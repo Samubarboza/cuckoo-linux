@@ -1,0 +1,125 @@
+* { all: unset; }
+
+window { background-color: transparent; }
+
+/* Mismo tono, fuente y sombras que la barra de waybar */
+.popup-card {
+    font-family: "Adwaita Sans", "JetBrainsMono Nerd Font Propo", sans-serif;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    /* Arriba transparente y se oscurece hacia abajo: no se ve el borde superior.
+       En px para que el desvanecido mida lo mismo en tarjetas cortas y largas */
+    background-color: transparent;
+    background-image: linear-gradient(to bottom,
+        rgba(24, 24, 26, 0.00) 0px,
+        rgba(24, 24, 26, 0.55) 26px,
+        rgba(24, 24, 26, 0.78) 60px,
+        rgba(24, 24, 26, 0.85) 100%);
+    border: none;
+    border-radius: 0 0 14px 14px;
+    box-shadow: 0 12px 20px -12px rgba(0, 0, 0, 0.45);
+}
+
+.popup-title    { font-size: 13px; font-weight: 600; }
+.popup-subtitle { font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, 0.55); }
+
+/* Musica */
+.media-card { padding: 12px 10px 8px 10px; }
+
+.popup-btn {
+    font-family: "JetBrainsMono Nerd Font Propo", sans-serif;
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.85);
+    padding: 4px 0;
+    margin: 0 2px;
+    border-radius: 7px;
+    transition: all 160ms ease;
+}
+.popup-btn:hover  { color: #ffffff; background-color: rgba(255, 255, 255, 0.14); }
+.media-quit:hover { color: #ff6961; background-color: rgba(255, 105, 97, 0.16); }
+
+/* Sistema: CPU y RAM */
+.system-card { padding: 12px 14px 14px 14px; }
+
+.usage-icon   { font-family: "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 17px; }
+.usage-name   { font-size: 13px; font-weight: 600; }
+.usage-detail { font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.55); }
+.usage-value  { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.85); min-width: 34px; }
+
+.usage-bar trough {
+    min-height: 3px;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.20);
+}
+.usage-bar progress {
+    min-height: 3px;
+    border-radius: 3px;
+    background-color: #ffffff;
+}
+
+/* Wifi */
+.wifi-card { padding: 12px 10px 10px 10px; }
+.wifi-option   { font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, 0.85); padding-left: 2px; }
+.popup-section { font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.55); padding-left: 2px; }
+.popup-divider { min-height: 1px; background-color: rgba(255, 255, 255, 0.12); margin: 0 2px; }
+
+.wifi-row {
+    padding: 6px 8px;
+    border-radius: 7px;
+    transition: background-color 160ms ease;
+}
+.wifi-row:hover   { background-color: rgba(255, 255, 255, 0.14); }
+.wifi-row-active  { background-color: rgba(255, 255, 255, 0.10); }
+.wifi-signal { font-family: "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 15px; }
+.wifi-name   { font-size: 13px; font-weight: 500; }
+.wifi-state  { font-family: "JetBrainsMono Nerd Font Propo", "Adwaita Sans", sans-serif; font-size: 12px; color: rgba(255, 255, 255, 0.70); }
+.wifi-lock   { font-family: "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 12px; color: rgba(255, 255, 255, 0.55); }
+
+.wifi-password-box { padding: 6px 4px 8px 4px; }
+.wifi-password-field {
+    background-color: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 7px;
+    padding: 5px 8px;
+}
+.wifi-password { font-size: 13px; color: #ffffff; caret-color: #ffffff; }
+.wifi-eye {
+    font-family: "JetBrainsMono Nerd Font Propo", sans-serif;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.70);
+}
+.wifi-eye:hover { color: #ffffff; }
+.wifi-connect {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 0;
+    border-radius: 7px;
+    background-color: rgba(255, 255, 255, 0.18);
+    transition: background-color 160ms ease;
+}
+.wifi-connect:hover { background-color: rgba(255, 255, 255, 0.28); }
+
+/* Switch estilo macOS */
+.switch {
+    min-width: 30px;
+    min-height: 18px;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.22);
+    padding: 2px;
+    transition: background-color 200ms ease;
+}
+.switch-on { background-color: rgba(255, 255, 255, 0.85); }
+.switch-knob {
+    min-width: 14px;
+    min-height: 14px;
+    border-radius: 999px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.switch-on .switch-knob { background-color: #1c1c1e; box-shadow: none; }
+
+/* Fondo que detecta clicks afuera: casi invisible */
+.popup-backdrop { background-color: rgba(0, 0, 0, 0.01); }
+
+/* Posicion de la tarjeta de wifi dentro de su ventana de pantalla completa */
+.wifi-position { margin-top: 30px; min-width: 290px; }

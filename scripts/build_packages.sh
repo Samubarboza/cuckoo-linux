@@ -7,7 +7,7 @@
 set -e -u
 
 project_dir="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")/..")"
-package_dirs=("desktop" "greeter")
+package_dirs=("desktop" "greeter" "eww")
 output_dir="${project_dir}/configs/cuckoo/airootfs/usr/local/share/cuckoo/packages"
 build_user="nobody"
 
@@ -18,11 +18,14 @@ for required_command in makepkg fakeroot cargo pkg-config; do
     fi
 done
 
-# The greeter links against gtk4, so this one has to be here to compile
-if ! pkg-config --exists gtk4; then
-    printf "ERROR: gtk4 was not found. Install 'gtk4'.\n" >&2
-    exit 1
-fi
+# The greeter links against gtk4 and eww against gtk3, so these have to be here to compile.
+# Each pair is the name pkg-config knows and the Arch package that brings it.
+for required_library in gtk4:gtk4 gtk+-3.0:gtk3 gtk-layer-shell-0:gtk-layer-shell dbusmenu-gtk3-0.4:libdbusmenu-gtk3; do
+    if ! pkg-config --exists "${required_library%%:*}"; then
+        printf "ERROR: %s was not found. Install '%s'.\n" "${required_library%%:*}" "${required_library#*:}" >&2
+        exit 1
+    fi
+done
 
 for package_dir in "${package_dirs[@]}"; do
     if [[ ! -f "${project_dir}/${package_dir}/PKGBUILD" ]]; then

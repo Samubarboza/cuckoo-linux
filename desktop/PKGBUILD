@@ -2,11 +2,17 @@
 
 pkgname=cuckoo-desktop
 pkgver=1.1.0
-pkgrel=1
+pkgrel=3
 pkgdesc="Desktop settings for Cuckoo Linux"
 arch=('any')
 url="https://github.com/Samubarboza/cuckoo-linux"
 license=('GPL-3.0-or-later')
+# What the Waybar in config/waybar uses
+depends=('waybar' 'eww' 'swaync'                     # the bar, its popups and the notifications
+         'jq' 'python' 'libnotify'                   # the popup scripts and their messages
+         'pavucontrol' 'pamixer'                     # click and right click on the volume
+         'ttf-jetbrains-mono-nerd' 'adwaita-fonts'   # the popups line up with these fonts
+         'noto-fonts-emoji')                         # the weather icon is an emoji
 
 # config goes to /etc/skel, the folder every new user starts with.
 # system goes to the root of the disk.
