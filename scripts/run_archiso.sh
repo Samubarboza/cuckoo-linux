@@ -67,7 +67,7 @@ check_architecture() {
         'i486'|'i686'|'pentium4') qemu_command='qemu-system-i386' ;;
         *) qemu_command="qemu-system-${arch}" ;;
     esac
-    if ! command -v "$qemu_command" %>/dev/null; then
+    if ! command -v "$qemu_command" &>/dev/null; then
         printf '[%s] ERROR: %s not found. Install QEMU for %s.\n' "$app_name" "$qemu_command" "$arch" >&2
         exit 1
     fi
