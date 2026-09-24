@@ -31,6 +31,7 @@ base_packages=(
     pipewire pipewire-pulse wireplumber
     bluez bluez-utils
     sudo git nano
+    python python-pip
 )
 
 # The log lives in memory and is lost on reboot, so keep a copy on the disk
