@@ -9,9 +9,8 @@ eww_command() { eww -c "$eww_config_dir" "$@"; }
 activity_file="${XDG_RUNTIME_DIR:-/tmp}/waybar-popup-activity"
 max_seconds_without_activity=30
 
-# Anchos de los popups que se ubican segun el click, los mismos de eww.yuck
+# Ancho del popup de sistema, se ubica segun el click. El mismo de eww.yuck
 system_popup_width=220
-wifi_popup_width=290
 
 # El que esta sonando. Si nada suena (ej. pausaste Spotify), el ultimo que sono,
 # asi los botones no saltan a otro reproductor como el navegador
@@ -120,8 +119,7 @@ open_popup() {
     [ "$1" = "media" ] && eww_command update media_status="$(playerctl -p "$(popup_player)" status 2>/dev/null)"
     focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .id')
     if [ "$1" = "wifi" ]; then
-        eww_command update wifi_selected="" wifi_password="" wifi_show_password=false wifi_connecting="" \
-            wifi_popup_x="$(find_popup_x_position "$wifi_popup_width")"
+        eww_command update wifi_selected="" wifi_password="" wifi_show_password=false wifi_connecting=""
         nmcli dev wifi rescan >/dev/null 2>&1 &
     fi
     # Primero los fondos que detectan el click afuera (uno por monitor), despues el popup encima.
