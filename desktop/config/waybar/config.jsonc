@@ -113,7 +113,7 @@
   "network": {
     "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
     "format-wifi": "<span size='large'></span>",
-    "format-ethernet": "<span size='large'>󰈀</span>",
+    "format-ethernet": "<span size='large'>󰌘</span>",
     "format-disconnected": "<span size='large'>󰤮</span>",
     "tooltip-format-wifi": "{essid} ({frequency} GHz)\nSignal: {signalStrength}%\n⇣ {bandwidthDownBytes}  ⇡ {bandwidthUpBytes}",
     "tooltip-format-ethernet": "Ethernet\n⇣ {bandwidthDownBytes}  ⇡ {bandwidthUpBytes}",
