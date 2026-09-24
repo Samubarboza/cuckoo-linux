@@ -1,0 +1,37 @@
+# Maintainer: Samubarboza <samubjunior95@gmail.com>
+
+# Widgets for the Waybar popups (music, wifi and system).
+# eww is not in the Arch repos, so we build it from the release we tested.
+# That release says 0.5.0 when you run it, but it is the v0.6.0 tag.
+pkgname=eww
+pkgver=0.6.0
+pkgrel=1
+pkgdesc="Widgets for the Cuckoo Linux bar"
+arch=('x86_64')
+url="https://github.com/elkowar/eww"
+license=('MIT')
+depends=('gtk3' 'gtk-layer-shell' 'libdbusmenu-gtk3')
+makedepends=('cargo')
+options=('!debug')
+_upstream="eww-${pkgver}"
+source=("${_upstream}.tar.gz::https://github.com/elkowar/eww/archive/refs/tags/v${pkgver}.tar.gz")
+sha256sums=('cef361946946c566b79f8ddc6208d1a3f16b4ff9961439a3f86935e1cfa174a1')
+
+# The release pins the time crate at 0.3.34, which does not compile with new Rust.
+# 0.3.36 fixes it. Then download the crates, so the build needs no network.
+prepare() {
+    cd -- "${_upstream}"
+    cargo update --package time@0.3.34 --precise 0.3.36
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/^host: //p')"
+}
+
+build() {
+    cd -- "${_upstream}"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo build --frozen --release
+}
+
+package() {
+    install -Dm 0755 -- "${_upstream}/target/release/eww" "${pkgdir}/usr/bin/eww"
+    install -Dm 0644 -- "${_upstream}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

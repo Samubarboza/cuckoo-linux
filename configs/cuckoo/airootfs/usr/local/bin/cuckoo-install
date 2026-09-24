@@ -267,7 +267,7 @@ fi
 # Every line says what to do when it fails: inside a step, set -e does not stop the script
 install_desktop_package() {
     pacman --root "${target_dir}" --dbpath "${target_dir}/var/lib/pacman" \
-        --noconfirm -U -- "${desktop_packages_dir}"/cuckoo-{desktop,greeter}-[0-9]*.pkg.tar.zst || return 1
+        --noconfirm -U -- "${desktop_packages_dir}"/{cuckoo-desktop,cuckoo-greeter,eww}-[0-9]*.pkg.tar.zst || return 1
     # archinstall already made the user, so /etc/skel reached it too late
     arch-chroot "${target_dir}" cp -r --no-target-directory /etc/skel "/home/${username}" || return 1
     # The settings ship with a default terminal, put in the chosen one
