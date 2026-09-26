@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Check the format and the shell scripts before every commit.
+# Turn it on once with: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+printf 'Checking the format...\n'
+shfmt -d .
+
+printf 'Checking the shell scripts...\n'
+shfmt -f . | xargs -r shellcheck
