@@ -31,11 +31,11 @@ docker run --rm --device /dev/kvm \
   --volume "${project_dir}/out:/out:ro" \
   cuckoo-builder \
   qemu-system-x86_64 -enable-kvm -cpu host -m 4G \
-    -machine q35,smm=on -global driver=cfi.pflash01,property=secure,value=on \
-    -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd \
-    -drive if=pflash,format=raw,file=/vm/OVMF_VARS.fd \
-    -drive "if=none,id=pendrive,format=raw,readonly=on,file=/out/${iso_name}" \
-    -device qemu-xhci -device usb-storage,drive=pendrive,bootindex=0 \
-    -drive if=none,id=disco,format=raw,file=/vm/disco.img \
-    -device virtio-blk-pci,drive=disco,bootindex=1 \
-    -display gtk
+  -machine q35,smm=on -global driver=cfi.pflash01,property=secure,value=on \
+  -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd \
+  -drive if=pflash,format=raw,file=/vm/OVMF_VARS.fd \
+  -drive "if=none,id=pendrive,format=raw,readonly=on,file=/out/${iso_name}" \
+  -device qemu-xhci -device usb-storage,drive=pendrive,bootindex=0 \
+  -drive if=none,id=disco,format=raw,file=/vm/disco.img \
+  -device virtio-blk-pci,drive=disco,bootindex=1 \
+  -display gtk

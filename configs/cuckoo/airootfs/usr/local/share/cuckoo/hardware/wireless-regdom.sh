@@ -14,7 +14,7 @@ zone_table="/usr/share/zoneinfo/zone.tab"
 
 # The region is already set, keep it
 if grep -q '^WIRELESS_REGDOM=' "${regdom_file}"; then
-    exit 0
+  exit 0
 fi
 
 timezone="$(readlink -f /etc/localtime)"
@@ -22,8 +22,8 @@ timezone="${timezone#/usr/share/zoneinfo/}"
 country_code="$(awk -v timezone="${timezone}" '$3 == timezone { print $1; exit }' "${zone_table}")"
 
 if [[ ! "${country_code}" =~ ^[A-Z]{2}$ ]]; then
-    printf 'The country of the timezone is unknown, the wireless region is not set.\n'
-    exit 0
+  printf 'The country of the timezone is unknown, the wireless region is not set.\n'
+  exit 0
 fi
 
 printf 'WIRELESS_REGDOM="%s"\n' "${country_code}" >>"${regdom_file}"

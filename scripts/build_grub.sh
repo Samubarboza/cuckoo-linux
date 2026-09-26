@@ -20,17 +20,17 @@ temporary_dir="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_dir}"' EXIT
 
 for required_command in curl sha256sum tar patch make gcc bison flex python3; do
-    if ! command -v "${required_command}" &>/dev/null; then
-        printf "ERROR: '%s' was not found. Install 'base-devel' and 'python'.\n" "${required_command}" >&2
-        exit 1
-    fi
+  if ! command -v "${required_command}" &>/dev/null; then
+    printf "ERROR: '%s' was not found. Install 'base-devel' and 'python'.\n" "${required_command}" >&2
+    exit 1
+  fi
 done
 
 printf 'Downloading GRUB %s...\n' "${grub_version}"
 curl -fL -o "${temporary_dir}/grub.tar.xz" "${grub_download_url}"
 if ! printf '%s  %s\n' "${grub_download_sha256}" "${temporary_dir}/grub.tar.xz" | sha256sum -c --quiet; then
-    printf 'ERROR: the GRUB download is not the expected file.\n' >&2
-    exit 1
+  printf 'ERROR: the GRUB download is not the expected file.\n' >&2
+  exit 1
 fi
 
 printf 'Building GRUB with the Cuckoo patch...\n'
@@ -47,9 +47,9 @@ sha256sum <"${grub_patch_file}" >"${grub_build_dir}/share/grub/cuckoo-grub-patch
 
 # The menu font is not built here, so take it from the Arch grub package when it exists
 if [[ -f "${system_grub_font}" ]]; then
-    install -m 0644 -- "${system_grub_font}" "${grub_build_dir}/share/grub/"
+  install -m 0644 -- "${system_grub_font}" "${grub_build_dir}/share/grub/"
 else
-    printf "WARNING: '%s' was not found. The GRUB menu will use a simple font.\n" "${system_grub_font}" >&2
+  printf "WARNING: '%s' was not found. The GRUB menu will use a simple font.\n" "${system_grub_font}" >&2
 fi
 
 printf 'Done! GRUB is in %s\n' "${grub_build_dir}"

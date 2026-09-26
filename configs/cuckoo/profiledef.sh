@@ -8,7 +8,7 @@ iso_application="Cuckoo Linux Live/Rescue DVD"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="cuckoo"
 bootmodes=('bios.syslinux'
-           'uefi.shim-grub')
+  'uefi.shim-grub')
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
 airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86,arm64' '-b' '1M' '-Xdict-size' '1M')
