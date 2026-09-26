@@ -73,6 +73,15 @@ You need Arch Linux and these packages: ``arch-install-scripts``, ``libisoburn``
 
 The ISO is in the ``out`` folder.
 
+Development
+===========
+
+Turn on the checks that run before every commit. Do this once after cloning:
+
+.. code:: sh
+
+   git config core.hooksPath .githooks
+
 Credits and license
 ===================
 
