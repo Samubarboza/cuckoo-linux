@@ -18,7 +18,7 @@ depends=('waybar' 'eww' 'swaync'                     # the bar, its popups and t
 # system goes to the root of the disk.
 package() {
     install -d -m 0755 -- "${pkgdir}/etc/skel/.config"
-    # Files come from $startdir because this package lives in the repository (see AGENTS.md)
+    # Files come from the package folder because this package lives in the repository (see AGENTS.md)
     cp -r --no-preserve=ownership -- "${startdir}/config/." "${pkgdir}/etc/skel/.config/"
     cp -r --no-preserve=ownership -- "${startdir}/system/." "${pkgdir}/"
     chmod -R u=rwX,go=rX -- "${pkgdir}/etc" "${pkgdir}/usr"
