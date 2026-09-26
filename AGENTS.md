@@ -74,3 +74,4 @@ Run all commands from the repository root.
 - `./scripts/install_vm.sh` — boot the ISO with Secure Boot and install on the virtual disk
 - `./scripts/boot_vm_no_secureboot.sh` — boot the installed system without Secure Boot
 - `shfmt -w .` — format the shell scripts
+- `shfmt -f . | xargs shellcheck` — check the shell scripts
