@@ -18,3 +18,4 @@ man/version.rst
 !configs/cuckoo/secureboot/MOK.cer
 grub-build/
 configs/cuckoo/airootfs/usr/local/share/cuckoo/packages/
+vm/
