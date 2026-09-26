@@ -66,6 +66,13 @@ Each folder has one job only.
 2. Boot the ISO in QEMU with Secure Boot before every merge.
 
 
+## Known decisions
+
+- Today the packages travel inside the ISO. Later they will move to our own server, and the installed system will update from there.
+- `desktop/PKGBUILD` copies files with `$startdir`, because the package lives in this repository. It will change when the packages move to our own server.
+
+## Commands
+
 Run all commands from the repository root.
 
 - `./scripts/build_image.sh` — build the builder image (only when the `Dockerfile` or the GRUB patch changes)
