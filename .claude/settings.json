@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(shfmt:*)",
+      "Bash(shellcheck:*)",
+      "Bash(./scripts/check_packages.sh:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "ask": [
+      "Bash(./scripts/build_image.sh:*)",
+      "Bash(./scripts/build_iso.sh:*)"
+    ],
+    "deny": [
+      "Read(~/cuckoo-keys/**)",
+      "Edit(~/cuckoo-keys/**)",
+      "Bash(sudo:*)",
+      "Bash(dd:*)",
+      "Bash(mkfs:*)",
+      "Bash(wipefs:*)",
+      "Bash(pacman:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(./scripts/reset_disk.sh:*)",
+      "Bash(./scripts/install_vm.sh:*)",
+      "Bash(./scripts/boot_vm_no_secureboot.sh:*)"
+    ]
+  }
+}
