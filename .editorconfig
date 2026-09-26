@@ -21,6 +21,7 @@ binary_next_line = true
 # Files that come from archiso keep their original style
 [{archiso/**,configs/baseline/**,configs/releng/**,scripts/run_archiso.sh}]
 indent_size = 4
+ignore = true
 
 [Makefile]
 indent_style = tab
