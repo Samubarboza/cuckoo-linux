@@ -23,180 +23,186 @@ packages_total=0
 
 # The same list installs the system and counts the packages for the progress bar
 base_packages=(
-    base linux linux-firmware mkinitcpio
-    grub efibootmgr
-    intel-ucode amd-ucode
-    btrfs-progs
-    networkmanager wireless-regdb
-    pipewire pipewire-pulse wireplumber
-    bluez bluez-utils
-    sudo git nano
-    python python-pip
+  base linux linux-firmware mkinitcpio
+  grub efibootmgr
+  intel-ucode amd-ucode
+  btrfs-progs
+  networkmanager wireless-regdb
+  pipewire pipewire-pulse wireplumber
+  bluez bluez-utils
+  sudo git nano
+  python python-pip
 )
 
 # The log lives in memory and is lost on reboot, so keep a copy on the disk
 save_log_to_disk() {
-    if [[ -d "${target_dir}/var/log" ]]; then
-        cp -- "${log_file}" "${target_dir}/var/log/cuckoo-install.log" 2>/dev/null || true
-    fi
-    # Write everything to the disk now, so turning off the computer loses nothing
-    sync
+  if [[ -d "${target_dir}/var/log" ]]; then
+    cp -- "${log_file}" "${target_dir}/var/log/cuckoo-install.log" 2>/dev/null || true
+  fi
+  # Write everything to the disk now, so turning off the computer loses nothing
+  sync
 }
 
 fail() {
-    save_log_to_disk
-    printf '\033[2J\033[H'
-    printf 'ERROR: %s\n' "$1" >&2
-    printf 'The details are in %s\n' "${log_file}" >&2
-    exit 1
+  save_log_to_disk
+  printf '\033[2J\033[H'
+  printf 'ERROR: %s\n' "$1" >&2
+  printf 'The details are in %s\n' "${log_file}" >&2
+  exit 1
 }
 
 format_elapsed_time() {
-    if (( $1 < 60 )); then
-        printf '%ss' "$1"
-    else
-        printf '%sm %02ss' "$(( $1 / 60 ))" "$(( $1 % 60 ))"
-    fi
+  if (($1 < 60)); then
+    printf '%ss' "$1"
+  else
+    printf '%sm %02ss' "$(($1 / 60))" "$(($1 % 60))"
+  fi
 }
 
 # Ask pacman how many packages this install needs. It downloads nothing, only asks.
 # A total that does not come out leaves the bar as it was, the install goes on.
 count_target_packages() {
-    local counted=0
-    if pacman -Sy &>/dev/null; then
-        counted="$(pacman -Sp --print-format '%n' -- "${base_packages[@]}" 2>/dev/null | sort -u | wc -l)"
-    fi
-    if (( counted < 30 || counted > 2000 )); then
-        counted=0
-    fi
-    printf '%s' "${counted}"
+  local counted=0
+  if pacman -Sy &>/dev/null; then
+    counted="$(pacman -Sp --print-format '%n' -- "${base_packages[@]}" 2>/dev/null | sort -u | wc -l)"
+  fi
+  if ((counted < 30 || counted > 2000)); then
+    counted=0
+  fi
+  printf '%s' "${counted}"
 }
 
 # How far the base system got, from 0 to 100. Each installed package leaves
 # a folder on the disk, so counting them is enough and it never goes back.
 base_system_percent() {
-    local installed
-    if (( packages_total == 0 )); then
-        printf '0'
-        return 0
-    fi
-    installed="$(find "${target_dir}/var/lib/pacman/local" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)"
-    if (( installed > packages_total )); then
-        installed="${packages_total}"
-    fi
-    printf '%s' "$(( installed * 100 / packages_total ))"
+  local installed
+  if ((packages_total == 0)); then
+    printf '0'
+    return 0
+  fi
+  installed="$(find "${target_dir}/var/lib/pacman/local" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)"
+  if ((installed > packages_total)); then
+    installed="${packages_total}"
+  fi
+  printf '%s' "$((installed * 100 / packages_total))"
 }
 
 # Draw the whole screen again from the top, without clearing it first.
 # Each line erases what was there, so the logo stays still and nothing blinks.
 draw_screen() {
-    local title="$1" elapsed="$2" last_line="$3" percent="$4" progress_bar='' block filled_blocks
-    filled_blocks=$(( percent * bar_width / 100 ))
-    for (( block = 0; block < bar_width; block++ )); do
-        if (( block < filled_blocks )); then progress_bar+='█'; else progress_bar+='░'; fi
-    done
+  local title="$1" elapsed="$2" last_line="$3" percent="$4" progress_bar='' block filled_blocks
+  filled_blocks=$((percent * bar_width / 100))
+  for ((block = 0; block < bar_width; block++)); do
+    if ((block < filled_blocks)); then progress_bar+='█'; else progress_bar+='░'; fi
+  done
 
-    printf '\033[H'
-    [[ -n "${logo}" ]] && printf '%s\n\n' "${logo}"
-    printf 'Installing on %s\033[K\n\n' "${disk}"
-    printf '[%s]  %s%%\033[K\n\n' "${progress_bar}" "${percent}"
-    printf '%-40s %s\033[K\n' "${title}" "$(format_elapsed_time "${elapsed}")"
-    printf '%s\033[K\033[J' "${last_line}"
+  printf '\033[H'
+  [[ -n "${logo}" ]] && printf '%s\n\n' "${logo}"
+  printf 'Installing on %s\033[K\n\n' "${disk}"
+  printf '[%s]  %s%%\033[K\n\n' "${progress_bar}" "${percent}"
+  printf '%-40s %s\033[K\n' "${title}" "$(format_elapsed_time "${elapsed}")"
+  printf '%s\033[K\033[J' "${last_line}"
 }
 
 # Run a long command and keep the screen moving: the progress bar, the time it takes
 # and the last line of its output. The whole output stays in the log.
 run_step() {
-    local may_fail=0 progress_command=''
-    while [[ "$1" == --* ]]; do
-        case "$1" in
-            --may-fail) may_fail=1; shift ;;
-            --progress) progress_command="$2"; shift 2 ;;
-        esac
-    done
-    local title="$1" start_time="${SECONDS}" last_line step_percent step_pid
-    shift
+  local may_fail=0 progress_command=''
+  while [[ "$1" == --* ]]; do
+    case "$1" in
+      --may-fail)
+        may_fail=1
+        shift
+        ;;
+      --progress)
+        progress_command="$2"
+        shift 2
+        ;;
+    esac
+  done
+  local title="$1" start_time="${SECONDS}" last_line step_percent step_pid
+  shift
 
-    "$@" >>"${log_file}" 2>&1 </dev/null &
-    step_pid=$!
+  "$@" >>"${log_file}" 2>&1 </dev/null &
+  step_pid=$!
 
-    while kill -0 "${step_pid}" 2>/dev/null; do
-        last_line="$(tail -1 -- "${log_file}" 2>/dev/null \
-            | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' | tr -d '\r' | cut -c1-60)"
-        step_percent=0
-        if [[ -n "${progress_command}" ]]; then
-            step_percent="$("${progress_command}")"
-        fi
-        draw_screen "${title}" "$(( SECONDS - start_time ))" "${last_line}" \
-            "$(( (steps_done * 100 + step_percent) / total_steps ))"
-        sleep 0.3
-    done
-
-    if ! wait "${step_pid}"; then
-        (( may_fail )) && return 1
-        fail "${title} failed."
+  while kill -0 "${step_pid}" 2>/dev/null; do
+    last_line="$(tail -1 -- "${log_file}" 2>/dev/null \
+      | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' | tr -d '\r' | cut -c1-60)"
+    step_percent=0
+    if [[ -n "${progress_command}" ]]; then
+      step_percent="$("${progress_command}")"
     fi
-    steps_done=$(( steps_done + 1 ))
-    draw_screen "${title}" "$(( SECONDS - start_time ))" '' "$(( steps_done * 100 / total_steps ))"
+    draw_screen "${title}" "$((SECONDS - start_time))" "${last_line}" \
+      "$(((steps_done * 100 + step_percent) / total_steps))"
+    sleep 0.3
+  done
+
+  if ! wait "${step_pid}"; then
+    ((may_fail)) && return 1
+    fail "${title} failed."
+  fi
+  steps_done=$((steps_done + 1))
+  draw_screen "${title}" "$((SECONDS - start_time))" '' "$((steps_done * 100 / total_steps))"
 }
 
 read_answer() {
-    local answer_file="${answers_dir}/$1"
-    [[ -r "${answer_file}" ]] || fail "the answer '$1' is missing. Run cuckoo-configurator first."
-    <"${answer_file}" head -1
+  local answer_file="${answers_dir}/$1"
+  [[ -r "${answer_file}" ]] || fail "the answer '$1' is missing. Run cuckoo-configurator first."
+  <"${answer_file}" head -1
 }
 
 # Read the new partitions from the disk instead of guessing their names.
 # The disk was just erased, so they come in the order they were created.
 find_partitions() {
-    local try=0 partitions=()
-    partprobe -- "${disk}" &>/dev/null || true
-    while (( try++ < 10 )); do
-        udevadm settle &>/dev/null || true
-        mapfile -t partitions < <(lsblk --list --noheadings --output PATH -- "${disk}" | tail -n +2)
-        esp_partition="${partitions[0]:-}"
-        root_partition="${partitions[1]:-}"
-        [[ -b "${esp_partition}" && -b "${root_partition}" ]] && return 0
-        sleep 1
-    done
-    fail 'the new partitions were not found.'
+  local try=0 partitions=()
+  partprobe -- "${disk}" &>/dev/null || true
+  while ((try++ < 10)); do
+    udevadm settle &>/dev/null || true
+    mapfile -t partitions < <(lsblk --list --noheadings --output PATH -- "${disk}" | tail -n +2)
+    esp_partition="${partitions[0]:-}"
+    root_partition="${partitions[1]:-}"
+    [[ -b "${esp_partition}" && -b "${root_partition}" ]] && return 0
+    sleep 1
+  done
+  fail 'the new partitions were not found.'
 }
 
 prepare_disk() {
-    sgdisk --zap-all -- "${disk}"
-    sgdisk --new="1:0:+${esp_size}" --typecode=1:ef00 --change-name=1:CUCKOO_ESP \
-        --new=2:0:0 --typecode=2:8304 --change-name=2:CUCKOO_ROOT -- "${disk}"
-    udevadm settle
+  sgdisk --zap-all -- "${disk}"
+  sgdisk --new="1:0:+${esp_size}" --typecode=1:ef00 --change-name=1:CUCKOO_ESP \
+    --new=2:0:0 --typecode=2:8304 --change-name=2:CUCKOO_ROOT -- "${disk}"
+  udevadm settle
 }
 
 format_disk() {
-    mkfs.fat -F 32 -n CUCKOO_ESP -- "${esp_partition}"
-    mkfs.btrfs -f -L CUCKOO -- "${root_partition}"
+  mkfs.fat -F 32 -n CUCKOO_ESP -- "${esp_partition}"
+  mkfs.btrfs -f -L CUCKOO -- "${root_partition}"
 }
 
 mount_disk() {
-    local subvolume
-    # Always say the file system, otherwise mount tries others first and the screen fills with errors
-    mount -t btrfs -- "${root_partition}" "${target_dir}"
-    for subvolume in @ @home @log @pkg; do
-        btrfs subvolume create "${target_dir}/${subvolume}"
-    done
-    umount -- "${target_dir}"
+  local subvolume
+  # Always say the file system, otherwise mount tries others first and the screen fills with errors
+  mount -t btrfs -- "${root_partition}" "${target_dir}"
+  for subvolume in @ @home @log @pkg; do
+    btrfs subvolume create "${target_dir}/${subvolume}"
+  done
+  umount -- "${target_dir}"
 
-    mount -t btrfs -o "${btrfs_mount_options},subvol=@" -- "${root_partition}" "${target_dir}"
-    mkdir -p -- "${target_dir}/home" "${target_dir}/var/log" "${target_dir}/var/cache/pacman/pkg" "${target_dir}/boot"
-    mount -t btrfs -o "${btrfs_mount_options},subvol=@home" -- "${root_partition}" "${target_dir}/home"
-    mount -t btrfs -o "${btrfs_mount_options},subvol=@log" -- "${root_partition}" "${target_dir}/var/log"
-    mount -t btrfs -o "${btrfs_mount_options},subvol=@pkg" -- "${root_partition}" "${target_dir}/var/cache/pacman/pkg"
-    mount -t vfat -- "${esp_partition}" "${target_dir}/boot"
+  mount -t btrfs -o "${btrfs_mount_options},subvol=@" -- "${root_partition}" "${target_dir}"
+  mkdir -p -- "${target_dir}/home" "${target_dir}/var/log" "${target_dir}/var/cache/pacman/pkg" "${target_dir}/boot"
+  mount -t btrfs -o "${btrfs_mount_options},subvol=@home" -- "${root_partition}" "${target_dir}/home"
+  mount -t btrfs -o "${btrfs_mount_options},subvol=@log" -- "${root_partition}" "${target_dir}/var/log"
+  mount -t btrfs -o "${btrfs_mount_options},subvol=@pkg" -- "${root_partition}" "${target_dir}/var/cache/pacman/pkg"
+  mount -t vfat -- "${esp_partition}" "${target_dir}/boot"
 }
 
 write_archinstall_files() {
-    local packages_json
-    packages_json="$(printf '"%s",' "${base_packages[@]}")"
-    packages_json="[${packages_json%,}]"
+  local packages_json
+  packages_json="$(printf '"%s",' "${base_packages[@]}")"
+  packages_json="[${packages_json%,}]"
 
-    cat >"${answers_dir}/archinstall.json" <<EOF
+  cat >"${answers_dir}/archinstall.json" <<EOF
 {
   "disk_config": { "config_type": "pre_mounted_config", "mountpoint": "${target_dir}" },
   "bootloader": "Grub",
@@ -213,19 +219,19 @@ write_archinstall_files() {
 }
 EOF
 
-    # json escapes the quotes and backslashes of the password, a plain text file does not.
-    # The values go in the environment, so they are not shown in the process list.
-    CUCKOO_USERNAME="${username}" CUCKOO_PASSWORD="${password}" python3 -c '
+  # json escapes the quotes and backslashes of the password, a plain text file does not.
+  # The values go in the environment, so they are not shown in the process list.
+  CUCKOO_USERNAME="${username}" CUCKOO_PASSWORD="${password}" python3 -c '
 import json, os
 user = {"username": os.environ["CUCKOO_USERNAME"], "!password": os.environ["CUCKOO_PASSWORD"], "sudo": True, "groups": []}
 print(json.dumps({"!users": [user]}, indent=2))
 ' >"${answers_dir}/credentials.json" || fail 'the user settings could not be written.'
-    chmod 600 -- "${answers_dir}/credentials.json"
+  chmod 600 -- "${answers_dir}/credentials.json"
 }
 
-if (( EUID != 0 )); then
-    printf 'ERROR: run this as root.\n' >&2
-    exit 1
+if ((EUID != 0)); then
+  printf 'ERROR: run this as root.\n' >&2
+  exit 1
 fi
 
 disk="$(read_answer disk)"
@@ -240,7 +246,7 @@ base_packages+=(hyprland swaybg "${terminal}" greetd)
 
 [[ -b "${disk}" ]] || fail "'${disk}' is not a disk."
 if findmnt --source "${disk}" &>/dev/null || findmnt "${disk}"* &>/dev/null; then
-    fail "'${disk}' is in use. Reboot and try again."
+  fail "'${disk}' is in use. Reboot and try again."
 fi
 
 esp_partition=""
@@ -260,46 +266,46 @@ write_archinstall_files
 packages_total="$(count_target_packages)"
 # setsid leaves archinstall without a terminal, so it writes in the log and not on our screen
 run_step --progress base_system_percent 'Installing the base system' \
-    setsid --wait archinstall --silent --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
+  setsid --wait archinstall --silent --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
 
 # The console login reads this file, the login screen has its own image
 if [[ -n "${logo}" ]]; then
-    printf '%s\n\n' "${logo}" >"${target_dir}/etc/issue"
+  printf '%s\n\n' "${logo}" >"${target_dir}/etc/issue"
 fi
 
 # Every line says what to do when it fails: inside a step, set -e does not stop the script
 install_desktop_package() {
-    pacman --root "${target_dir}" --dbpath "${target_dir}/var/lib/pacman" \
-        --noconfirm -U -- "${desktop_packages_dir}"/{cuckoo-desktop,cuckoo-greeter,eww}-[0-9]*.pkg.tar.zst || return 1
-    # archinstall already made the user, so /etc/skel reached it too late
-    arch-chroot "${target_dir}" cp -r --no-target-directory /etc/skel "/home/${username}" || return 1
-    # The settings ship with a default terminal, put in the chosen one
-    sed -i "s|^\$terminal = .*|\$terminal = ${terminal}|" \
-        "${target_dir}/home/${username}/.config/hypr/hyprland.conf" || return 1
-    arch-chroot "${target_dir}" chown -R "${username}:" "/home/${username}" || return 1
-    # Only now, so a broken desktop leaves the plain console login working.
-    # graphical.target is what pulls in the login screen, the console one does not.
-    arch-chroot "${target_dir}" systemctl enable greetd.service || return 1
-    arch-chroot "${target_dir}" systemctl set-default graphical.target || return 1
+  pacman --root "${target_dir}" --dbpath "${target_dir}/var/lib/pacman" \
+    --noconfirm -U -- "${desktop_packages_dir}"/{cuckoo-desktop,cuckoo-greeter,eww}-[0-9]*.pkg.tar.zst || return 1
+  # archinstall already made the user, so /etc/skel reached it too late
+  arch-chroot "${target_dir}" cp -r --no-target-directory /etc/skel "/home/${username}" || return 1
+  # The settings ship with a default terminal, put in the chosen one
+  sed -i "s|^\$terminal = .*|\$terminal = ${terminal}|" \
+    "${target_dir}/home/${username}/.config/hypr/hyprland.conf" || return 1
+  arch-chroot "${target_dir}" chown -R "${username}:" "/home/${username}" || return 1
+  # Only now, so a broken desktop leaves the plain console login working.
+  # graphical.target is what pulls in the login screen, the console one does not.
+  arch-chroot "${target_dir}" systemctl enable greetd.service || return 1
+  arch-chroot "${target_dir}" systemctl set-default graphical.target || return 1
 }
 
 # The desktop is not needed to boot, so a failure only warns
 desktop_warning=''
 if ! run_step --may-fail 'Installing the desktop' install_desktop_package; then
-    desktop_warning='yes'
+  desktop_warning='yes'
 fi
 
 install_hardware_drivers() {
-    install -Dm 755 -- "${hardware_script}" "${target_dir}${hardware_script}"
-    install -d -m 0755 -- "${target_dir}${hardware_fixes_dir}"
-    install -m 0755 -- "${hardware_fixes_dir}"/*.sh "${target_dir}${hardware_fixes_dir}/"
-    arch-chroot "${target_dir}" "${hardware_script}"
+  install -Dm 755 -- "${hardware_script}" "${target_dir}${hardware_script}"
+  install -d -m 0755 -- "${target_dir}${hardware_fixes_dir}"
+  install -m 0755 -- "${hardware_fixes_dir}"/*.sh "${target_dir}${hardware_fixes_dir}/"
+  arch-chroot "${target_dir}" "${hardware_script}"
 }
 
 # The drivers are useful but not needed to boot, so a failure only warns
 drivers_warning=''
 if ! run_step --may-fail 'Installing your video drivers' install_hardware_drivers; then
-    drivers_warning='yes'
+  drivers_warning='yes'
 fi
 
 save_log_to_disk
@@ -311,13 +317,13 @@ printf '\033[2J\033[H'
 printf 'Done! Cuckoo Linux is installed.\n'
 printf 'Remove the USB drive.\n\n'
 if [[ -n "${desktop_warning}" ]]; then
-    printf 'The desktop settings were not installed.\n\n'
+  printf 'The desktop settings were not installed.\n\n'
 fi
 if [[ -n "${drivers_warning}" ]]; then
-    printf 'The video drivers were not installed.\n'
-    printf 'Run cuckoo-hardware as root after the first boot.\n\n'
+  printf 'The video drivers were not installed.\n'
+  printf 'Run cuckoo-hardware as root after the first boot.\n\n'
 fi
 
 if gum confirm 'Reboot now?' --affirmative 'Reboot now' --negative 'Go to the console'; then
-    systemctl reboot
+  systemctl reboot
 fi

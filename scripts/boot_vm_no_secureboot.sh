@@ -25,7 +25,7 @@ docker run --rm --device /dev/kvm \
   --volume "${project_dir}/vm:/vm" \
   cuckoo-builder \
   qemu-system-x86_64 -enable-kvm -cpu host -m 4G -machine q35 \
-    -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd \
-    -drive if=pflash,format=raw,file=/vm/OVMF_VARS_sin_secureboot.fd \
-    -drive if=virtio,format=raw,file=/vm/disco.img \
-    -display gtk
+  -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd \
+  -drive if=pflash,format=raw,file=/vm/OVMF_VARS_sin_secureboot.fd \
+  -drive if=virtio,format=raw,file=/vm/disco.img \
+  -display gtk
