@@ -17,11 +17,14 @@ RUN pacman -Syu --noconfirm --needed \
 # The menu font comes from the Arch grub package, which is only downloaded, not installed
 COPY scripts/build_grub.sh /opt/cuckoo/scripts/
 COPY configs/cuckoo/secureboot/grub-always-use-shim.patch /opt/cuckoo/configs/cuckoo/secureboot/
-RUN pacman -Sw --noconfirm grub \
+RUN pacman -Syw --noconfirm grub \
     && install -d /usr/share/grub \
     && bsdtar -xOf /var/cache/pacman/pkg/grub-*.pkg.tar.zst usr/share/grub/unicode.pf2 >/usr/share/grub/unicode.pf2 \
     && /opt/cuckoo/scripts/build_grub.sh \
     && pacman -Scc --noconfirm
 ENV PATH="/opt/cuckoo/grub-build/bin:${PATH}"
+
+# namcap checks the PKGBUILD files
+RUN pacman -Syu --noconfirm --needed namcap && pacman -Scc --noconfirm
 
 WORKDIR /build
