@@ -1,41 +1,26 @@
-# EditorConfig for archiso
+# EditorConfig for Cuckoo Linux
 # https://editorconfig.org/
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Top-most EditorConfig file
 root = true
 
-# Unix-style newlines without trailing whitespaces, but with a newline
-# ending every file, utf-8 charset, set indent to spaces with width of four
+# Unix newlines, UTF-8, no trailing spaces, two spaces for indentation
 [*]
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 charset = utf-8
 indent_style = space
-indent_size = 4
+indent_size = 2
 max_line_length = 120
 # for shfmt
 switch_case_indent = true
 binary_next_line = true
 
-
-[*.{yml,yaml}]
-end_of_line = lf
-insert_final_newline = true
-trim_trailing_whitespace = true
-charset = utf-8
-indent_style = space
-indent_size = 2
-
-[*.rst]
-end_of_line = lf
-insert_final_newline = true
-trim_trailing_whitespace = true
-charset = utf-8
-indent_style = space
-indent_size = 2
+# Files that come from archiso keep their original style
+[{archiso/**,configs/baseline/**,configs/releng/**,scripts/run_archiso.sh}]
+indent_size = 4
 
 [Makefile]
 indent_style = tab
