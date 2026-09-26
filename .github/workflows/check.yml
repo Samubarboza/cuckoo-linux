@@ -2,10 +2,15 @@ name: check
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   check:
@@ -13,10 +18,16 @@ jobs:
     container: archlinux:latest
     steps:
       - name: Install tools
-        run: pacman -Syu --noconfirm --needed git make shellcheck
+        run: pacman -Syu --noconfirm --needed git shfmt shellcheck namcap
 
       - name: Get the code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Check the scripts
-        run: make check
+      - name: Check the format
+        run: shfmt -d .
+
+      - name: Check the shell scripts
+        run: shfmt -f . | xargs -r shellcheck
+
+      - name: Check the packages
+        run: namcap */PKGBUILD
