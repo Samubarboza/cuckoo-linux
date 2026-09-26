@@ -2,10 +2,19 @@ name: check
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  SHFMT_VERSION: 3.13.1
+  SHELLCHECK_VERSION: 0.11.0
 
 jobs:
   check:
@@ -13,10 +22,23 @@ jobs:
     container: archlinux:latest
     steps:
       - name: Install tools
-        run: pacman -Syu --noconfirm --needed git make shellcheck
+        run: pacman -Syu --noconfirm --needed git namcap
+
+      - name: Install shfmt and shellcheck
+        run: |
+          curl -fsSL -o /usr/local/bin/shfmt "https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}/shfmt_v${SHFMT_VERSION}_linux_amd64"
+          chmod +x /usr/local/bin/shfmt
+          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" \
+            | tar -xJ --strip-components=1 -C /usr/local/bin "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
 
       - name: Get the code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Check the scripts
-        run: make check
+      - name: Check the format
+        run: shfmt -d .
+
+      - name: Check the shell scripts
+        run: shfmt -f . | xargs -r shellcheck
+
+      - name: Check the packages
+        run: namcap */PKGBUILD
