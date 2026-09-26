@@ -76,6 +76,8 @@ The ISO is in the ``out`` folder.
 Development
 ===========
 
+You need ``shfmt`` 3.13.1 and ``shellcheck`` 0.11.0, the same versions as CI.
+
 Turn on the checks that run before every commit. Do this once after cloning:
 
 .. code:: sh
