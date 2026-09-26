@@ -17,15 +17,15 @@ system_popup_width=220
 last_player_file="${XDG_RUNTIME_DIR:-/tmp}/waybar-last-player"
 find_active_player() {
   playing_player=$(playerctl -l 2>/dev/null | while read -r name; do
-    [ "$(playerctl -p "$name" status 2>/dev/null)" = "Playing" ] && echo "$name" && break
+    [[ "$(playerctl -p "$name" status 2>/dev/null)" = "Playing" ]] && echo "$name" && break
   done)
-  if [ -n "$playing_player" ]; then
+  if [[ -n "$playing_player" ]]; then
     echo "$playing_player" >"$last_player_file"
     echo "$playing_player"
     return
   fi
   last_player=$(cat "$last_player_file" 2>/dev/null)
-  if [ -n "$last_player" ] && playerctl -l 2>/dev/null | grep -qxF "$last_player"; then
+  if [[ -n "$last_player" ]] && playerctl -l 2>/dev/null | grep -qxF "$last_player"; then
     echo "$last_player"
   else
     playerctl -l 2>/dev/null | head -n1
@@ -36,7 +36,7 @@ find_active_player() {
 popup_player_file="${XDG_RUNTIME_DIR:-/tmp}/waybar-popup-player"
 popup_player() {
   locked_player=$(cat "$popup_player_file" 2>/dev/null)
-  if [ -n "$locked_player" ] && playerctl -l 2>/dev/null | grep -qxF "$locked_player"; then
+  if [[ -n "$locked_player" ]] && playerctl -l 2>/dev/null | grep -qxF "$locked_player"; then
     echo "$locked_player"
   else
     find_active_player
@@ -52,7 +52,7 @@ close_all_popups() {
   eww_command update media_reveal=false system_reveal=false wifi_reveal=false 2>/dev/null
   sleep 0.22
   eww_command close-all 2>/dev/null
-  if [ -n "$(eww_command active-windows 2>/dev/null)" ]; then
+  if [[ -n "$(eww_command active-windows 2>/dev/null)" ]]; then
     eww_command kill 2>/dev/null
   fi
 }
@@ -61,12 +61,12 @@ close_all_popups() {
 watch_open_popup() {
   popup_name="$1"
   while sleep 1; do
-    [ -n "$(eww_command active-windows 2>/dev/null)" ] || exit 0
+    [[ -n "$(eww_command active-windows 2>/dev/null)" ]] || exit 0
     seconds_without_activity=$(($(date +%s) - $(stat -c %Y "$activity_file" 2>/dev/null || echo 0)))
     popup_still_open=false
     window_is_open "$popup_name-popup" && popup_still_open=true
     window_is_open "$popup_name-popup-typing" && popup_still_open=true
-    if [ "$popup_still_open" = false ] || [ "$seconds_without_activity" -gt "$max_seconds_without_activity" ]; then
+    if [[ "$popup_still_open" = false ]] || [[ "$seconds_without_activity" -gt "$max_seconds_without_activity" ]]; then
       close_all_popups
       exit 0
     fi
@@ -98,9 +98,9 @@ find_popup_x_position() {
 }
 
 open_popup() {
-  if [ "$1" = "media" ]; then
+  if [[ "$1" = "media" ]]; then
     active_player=$(find_active_player)
-    if [ -z "$active_player" ]; then
+    if [[ -z "$active_player" ]]; then
       notify-send "Música" "No hay ningún reproductor activo"
       exit 0
     fi
@@ -109,27 +109,27 @@ open_popup() {
   # La primera vez eww tarda en arrancar: esperar a que responda
   if ! eww_command ping >/dev/null 2>&1; then
     eww_command daemon >/dev/null 2>&1
-    for attempt in $(seq 20); do
+    for _ in $(seq 20); do
       eww_command ping >/dev/null 2>&1 && break
       sleep 0.1
     done
   fi
   eww_command close-all 2>/dev/null
   touch "$activity_file"
-  [ "$1" = "media" ] && eww_command update media_status="$(playerctl -p "$(popup_player)" status 2>/dev/null)"
+  [[ "$1" = "media" ]] && eww_command update media_status="$(playerctl -p "$(popup_player)" status 2>/dev/null)"
   focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .id')
-  if [ "$1" = "wifi" ]; then
+  if [[ "$1" = "wifi" ]]; then
     eww_command update wifi_selected="" wifi_password="" wifi_show_password=false wifi_connecting=""
     nmcli dev wifi rescan >/dev/null 2>&1 &
   fi
   # Primero los fondos que detectan el click afuera (uno por monitor), despues el popup encima.
   # El popup de wifi trae su propio fondo en su monitor
   for monitor_id in $(hyprctl monitors -j | jq -r '.[].id'); do
-    if [ "$monitor_id" != "$focused_monitor" ] || [ "$1" != "wifi" ]; then
+    if [[ "$monitor_id" != "$focused_monitor" ]] || [[ "$1" != "wifi" ]]; then
       eww_command open popup-backdrop --id "backdrop-$monitor_id" --screen "$monitor_id"
     fi
   done
-  if [ "$1" = "system" ]; then
+  if [[ "$1" = "system" ]]; then
     system_popup_x=$(find_popup_x_position "$system_popup_width" right)
     eww_command open system-popup --screen "$focused_monitor" --pos "${system_popup_x}x0"
   else

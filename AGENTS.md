@@ -66,6 +66,13 @@ Each folder has one job only.
 2. Boot the ISO in QEMU with Secure Boot before every merge.
 
 
+## Known decisions
+
+- Today the packages travel inside the ISO. Later they will move to our own server, and the installed system will update from there.
+- `desktop/PKGBUILD` copies files with `$startdir`, because the package lives in this repository. It will change when the packages move to our own server.
+
+## Commands
+
 Run all commands from the repository root.
 
 - `./scripts/build_image.sh` — build the builder image (only when the `Dockerfile` or the GRUB patch changes)
@@ -73,3 +80,6 @@ Run all commands from the repository root.
 - `./scripts/reset_disk.sh` — empty the virtual disk
 - `./scripts/install_vm.sh` — boot the ISO with Secure Boot and install on the virtual disk
 - `./scripts/boot_vm_no_secureboot.sh` — boot the installed system without Secure Boot
+- `shfmt -w .` — format the shell scripts
+- `shfmt -f . | xargs shellcheck` — check the shell scripts
+- `./scripts/check_packages.sh` — check the PKGBUILD files (two `$startdir` errors in `desktop` are expected)

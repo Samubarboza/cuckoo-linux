@@ -45,20 +45,20 @@ print(json.dumps(ordered[:12]))
 
 autoconnect_state() {
   connection_name=$(active_connection_name)
-  [ -z "$connection_name" ] && echo "none" && return
+  [[ -z "$connection_name" ]] && echo "none" && return
   nmcli -g connection.autoconnect connection show "$connection_name"
 }
 
 toggle_autoconnect() {
   connection_name=$(active_connection_name)
-  [ -z "$connection_name" ] && return
-  if [ "$(autoconnect_state)" = "yes" ]; then new_state="no"; else new_state="yes"; fi
+  [[ -z "$connection_name" ]] && return
+  if [[ "$(autoconnect_state)" = "yes" ]]; then new_state="no"; else new_state="yes"; fi
   nmcli connection modify "$connection_name" connection.autoconnect "$new_state"
   eww_command update wifi_autoconnect="$new_state"
 }
 
 toggle_radio() {
-  if [ "$(nmcli radio wifi)" = "enabled" ]; then nmcli radio wifi off; else nmcli radio wifi on; fi
+  if [[ "$(nmcli radio wifi)" = "enabled" ]]; then nmcli radio wifi off; else nmcli radio wifi on; fi
   eww_command update wifi_radio="$(nmcli radio wifi)"
 }
 
@@ -67,10 +67,10 @@ select_network() {
   network_id="$1"
   ssid=$(decode_network_id "$network_id")
   network_data=$(eww_command get wifi_networks | jq -c --arg ssid "$ssid" '.[] | select(.ssid == $ssid)')
-  if [ "$(echo "$network_data" | jq -r '.active')" = "true" ]; then
+  if [[ "$(echo "$network_data" | jq -r '.active')" = "true" ]]; then
     return
   fi
-  if [ "$(echo "$network_data" | jq -r '.saved')" = "true" ] || [ "$(echo "$network_data" | jq -r '.secure')" = "false" ]; then
+  if [[ "$(echo "$network_data" | jq -r '.saved')" = "true" ]] || [[ "$(echo "$network_data" | jq -r '.secure')" = "false" ]]; then
     connect_network "$network_id" ""
   else
     eww_command update wifi_selected="$network_id" wifi_show_password=false
@@ -88,7 +88,7 @@ connect_network() {
   ssid=$(decode_network_id "$1")
   typed_password="$2"
   eww_command update wifi_connecting="$1"
-  if [ -n "$typed_password" ]; then
+  if [[ -n "$typed_password" ]]; then
     nmcli dev wifi connect "$ssid" password "$typed_password" >/dev/null 2>&1
   elif nmcli -t -f NAME connection show | grep -qxF "$ssid"; then
     nmcli connection up id "$ssid" >/dev/null 2>&1
@@ -97,11 +97,11 @@ connect_network() {
   fi
   connection_status=$?
   eww_command update wifi_connecting="" wifi_selected=""
-  if [ "$connection_status" -eq 0 ]; then
+  if [[ "$connection_status" -eq 0 ]]; then
     notify-send "Wi-Fi" "Conectado a $ssid"
   else
     # Si fallo con contraseña nueva, no guardar una conexion rota
-    [ -n "$typed_password" ] && nmcli connection delete id "$ssid" >/dev/null 2>&1
+    [[ -n "$typed_password" ]] && nmcli connection delete id "$ssid" >/dev/null 2>&1
     notify-send "Wi-Fi" "No se pudo conectar a $ssid. Revisá la contraseña."
   fi
   eww_command update wifi_networks="$(list_networks)"
