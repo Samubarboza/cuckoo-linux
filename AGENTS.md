@@ -17,6 +17,7 @@ Cuckoo Linux is a system based on Arch Linux. It has three parts:
 - `greeter/` — login screen package
 - `scripts/` — tools to build and test
 - `local/` — work notes, not in the repository
+- `out/`, `work/`, `vm/` — build output and virtual machine files, not in the repository
 
 Each folder has one job only.
 
@@ -57,6 +58,7 @@ Each folder has one job only.
 - Only exception: `configs/cuckoo/secureboot/MOK.cer`, a public certificate.
 - Commands that work on disks (`dd`, `mkfs`, `wipefs`) need clear approval first.
 - Tests run in QEMU. Never install, format or change the host system.
+- Only the repository owner runs `reset_disk.sh` and the virtual machine scripts.
 
 ## Tests
 
@@ -64,3 +66,10 @@ Each folder has one job only.
 2. Boot the ISO in QEMU with Secure Boot before every merge.
 
 
+Run all commands from the repository root.
+
+- `./scripts/build_image.sh` — build the builder image (only when the `Dockerfile` or the GRUB patch changes)
+- `./scripts/build_iso.sh` — build the packages and the ISO into `out/`
+- `./scripts/reset_disk.sh` — empty the virtual disk
+- `./scripts/install_vm.sh` — boot the ISO with Secure Boot and install on the virtual disk
+- `./scripts/boot_vm_no_secureboot.sh` — boot the installed system without Secure Boot
