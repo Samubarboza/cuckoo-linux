@@ -29,6 +29,8 @@ Each folder has one job only.
 4. Stay inside the task. Write down other problems for later.
 5. Every change has a short description: what it does and why.
 6. Only the repository owner makes commits and pushes.
+7. Never break a system that is already installed.
+8. Every commit leaves the project building and working.
 
 ## Principles
 
