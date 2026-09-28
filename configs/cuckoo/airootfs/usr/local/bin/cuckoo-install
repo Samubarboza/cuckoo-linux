@@ -17,7 +17,7 @@ logo_file="/usr/local/share/cuckoo/logo.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=6
+total_steps=7
 steps_done=0
 packages_total=0
 
@@ -273,6 +273,27 @@ if [[ -n "${logo}" ]]; then
   printf '%s\n\n' "${logo}" >"${target_dir}/etc/issue"
 fi
 
+# Turn off the blinking console cursor so it does not show in the black moment
+# between the login and the desktop. It does not hide the boot messages.
+# grub-mkconfig writes a temp file and only replaces grub.cfg on success, so a
+# failure never breaks booting.
+configure_boot_cmdline() {
+  local grub_defaults="${target_dir}/etc/default/grub"
+  local cursor_option="vt.global_cursor_default=0"
+  [[ -f "${grub_defaults}" ]] || return 1
+  # Add the option only if it is missing, so running the installer twice is safe
+  if ! grep -qF -- "${cursor_option}" "${grub_defaults}"; then
+    sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 ${cursor_option}\"/" "${grub_defaults}" || return 1
+  fi
+  arch-chroot "${target_dir}" grub-mkconfig -o /boot/grub/grub.cfg
+}
+
+# The cursor option is polish, not needed to boot, so a failure only warns
+boot_warning=''
+if ! run_step --may-fail 'Setting up the boot' configure_boot_cmdline; then
+  boot_warning='yes'
+fi
+
 # Every line says what to do when it fails: inside a step, set -e does not stop the script
 install_desktop_package() {
   pacman --root "${target_dir}" --dbpath "${target_dir}/var/lib/pacman" \
@@ -322,6 +343,9 @@ fi
 if [[ -n "${drivers_warning}" ]]; then
   printf 'The video drivers were not installed.\n'
   printf 'Run cuckoo-hardware as root after the first boot.\n\n'
+fi
+if [[ -n "${boot_warning}" ]]; then
+  printf 'The boot options were not fully set.\n\n'
 fi
 
 if gum confirm 'Reboot now?' --affirmative 'Reboot now' --negative 'Go to the console'; then
