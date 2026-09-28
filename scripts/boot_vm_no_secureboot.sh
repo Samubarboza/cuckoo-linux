@@ -17,7 +17,7 @@ for required_file in "${disk_file}" "${uefi_vars}"; do
   fi
 done
 
-docker run --rm --device /dev/kvm \
+docker run --rm -it --device /dev/kvm \
   --env XDG_RUNTIME_DIR=/tmp/xdg \
   --env WAYLAND_DISPLAY="${WAYLAND_DISPLAY}" \
   --env GDK_BACKEND=wayland \
@@ -28,4 +28,5 @@ docker run --rm --device /dev/kvm \
   -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd \
   -drive if=pflash,format=raw,file=/vm/OVMF_VARS_sin_secureboot.fd \
   -drive if=virtio,format=raw,file=/vm/disco.img \
-  -display gtk
+  -display gtk \
+  -monitor stdio
