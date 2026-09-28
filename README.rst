@@ -11,88 +11,79 @@
 Cuckoo Linux
 ============
 
-Cuckoo Linux is a Linux distribution based on Arch Linux.
+Cuckoo Linux is a Linux system based on Arch Linux.
 
-**This project is in development.** It is not ready for daily use. Things can change or break.
+- An install ISO that works with Secure Boot on any computer.
+- Its own installer, in the terminal.
+- A desktop that is ready from the first boot.
 
-Goal
-====
+**This project is in development.** It is not ready for daily use.
 
-- Boot and install on any computer, with Secure Boot on.
-- No need to turn off Secure Boot.
-- A simple and friendly installer.
+Run and test
+============
 
-What works now
+You need Docker, KVM and a Wayland session.
+
+1. Make your own key. Do this one time. Keep ``MOK.key`` secret.
+
+   .. code:: sh
+
+      mkdir -p ~/cuckoo-keys
+      openssl req -new -x509 -newkey rsa:2048 -nodes -keyout ~/cuckoo-keys/MOK.key \
+          -out ~/cuckoo-keys/MOK.crt -days 3650 \
+          -subj "/CN=My Secure Boot Key/" -addext "extendedKeyUsage=codeSigning"
+      openssl x509 -in ~/cuckoo-keys/MOK.crt -outform DER -out configs/cuckoo/secureboot/MOK.cer
+
+2. Build the builder image. Do this again only when the ``Dockerfile`` or the GRUB patch changes.
+
+   .. code:: sh
+
+      ./scripts/build_image.sh
+
+3. Build the packages and the ISO. The ISO goes to ``out/``.
+
+   .. code:: sh
+
+      ./scripts/build_iso.sh
+
+4. Empty the virtual disk.
+
+   .. code:: sh
+
+      ./scripts/reset_disk.sh
+
+5. Start the ISO with Secure Boot and install on the virtual disk.
+
+   .. code:: sh
+
+      ./scripts/install_vm.sh
+
+6. Start the installed system. Secure Boot is off for now, because the installed system is not signed yet.
+
+   .. code:: sh
+
+      ./scripts/boot_vm_no_secureboot.sh
+
+The scripts need two files in ``vm/``: ``OVMF_VARS.fd`` and ``OVMF_VARS_sin_secureboot.fd``.
+
+Check the code
 ==============
 
-- The live ISO boots with Secure Boot on or off.
-- It also boots on old computers with BIOS.
-
-How Secure Boot works
-=====================
-
-1. The computer starts ``shim``. Microsoft signed it, so almost all computers trust it.
-2. ``shim`` starts GRUB. GRUB is signed with the Cuckoo key.
-3. GRUB starts the Linux kernel. The kernel is also signed with the Cuckoo key.
-
-The first time, the computer does not know the Cuckoo key:
-
-1. You see ``Verification failed``. This is normal. Press OK.
-2. A blue screen opens.
-3. Choose ``Enroll key from disk``, then ``MOK.cer``, ``Continue``, ``Yes`` and ``Reboot``.
-
-You do this only one time on each computer.
-
-Some new computers do not trust ``shim``. On them, turn on "Allow Microsoft 3rd Party UEFI CA" in the firmware settings.
-
-Build the ISO
-=============
-
-You need Arch Linux and these packages: ``arch-install-scripts``, ``libisoburn``, ``squashfs-tools``, ``dosfstools``,
-``mtools``, ``sbsigntools``, ``openssl``, ``base-devel`` and ``python``.
-
-1. Make your own key. Keep ``MOK.key`` secret, never share it.
-
-   .. code:: sh
-
-      openssl req -new -x509 -newkey rsa:2048 -nodes -keyout MOK.key -out MOK.crt -days 3650 \
-          -subj "/CN=My Secure Boot Key/" -addext "extendedKeyUsage=codeSigning"
-      openssl x509 -in MOK.crt -outform DER -out configs/cuckoo/secureboot/MOK.cer
-
-2. Build our GRUB. You do this only one time. It goes to the ``grub-build`` folder.
-
-   .. code:: sh
-
-      ./scripts/build_grub.sh
-
-3. Build the ISO. ``-S`` is the folder with ``MOK.key`` and ``MOK.crt``.
-
-   .. code:: sh
-
-      sudo env PATH="$PWD/grub-build/bin:$PATH" ./archiso/mkarchiso -v -S /path/to/key/folder -w work -o out configs/cuckoo
-
-The ISO is in the ``out`` folder.
-
-Development
-===========
-
-You need ``shfmt`` 3.13.1 and ``shellcheck`` 0.11.0, the same versions as CI.
-
-Turn on the checks that run before every commit. Do this once after cloning:
+You need ``shfmt`` 3.13.1 and ``shellcheck`` 0.11.0.
 
 .. code:: sh
 
    git config core.hooksPath .githooks
+   shfmt -f . | xargs shellcheck
+   ./scripts/check_packages.sh
 
-Credits and license
-===================
+The first line turns on the checks before every commit. Do it one time after cloning.
+
+License
+=======
 
 Cuckoo Linux is a modified copy of `archiso <https://gitlab.archlinux.org/archlinux/archiso>`_.
-We added Secure Boot support and the ``cuckoo`` profile.
-
-- ``shimx64.efi`` and ``mmx64.efi`` come from the Fedora 44 package ``shim-x64`` (version 16.1-5), without changes.
-  ``shim`` uses a BSD license.
-- The GRUB patch uses the same license as GRUB: GPL-3.0-or-later.
-- Everything else uses GPL-3.0-or-later, like archiso. See ``LICENSE``.
+It uses GPL-3.0-or-later. See ``LICENSE``.
+``shimx64.efi`` and ``mmx64.efi`` come from Fedora, without changes. They use a BSD license.
 
 Cuckoo Linux is not an official Arch Linux or Fedora project.
