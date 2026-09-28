@@ -23,5 +23,9 @@ binary_next_line = true
 indent_size = 4
 ignore = true
 
+# Build output is not part of the project
+[{work/**,out/**,vm/**,grub-build/**}]
+ignore = true
+
 [Makefile]
 indent_style = tab
