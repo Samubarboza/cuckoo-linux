@@ -64,7 +64,14 @@ ShellRoot {
         Tray {}
         Notifications {}
         Weather {}
-        Network {}
+        Network {
+          id: network
+          onClicked: {
+            var pos = network.mapToItem(null, 0, 0);
+            wifiPopup.anchorX = Math.max(4, pos.x + network.width - wifiPopup.implicitWidth);
+            wifiPopup.toggle();
+          }
+        }
         Volume {}
         VolumeSlider {}
         Control {
@@ -89,6 +96,12 @@ ShellRoot {
       // System popup, dropped under the control switch
       SystemPopup {
         id: systemPopup
+        barWindow: bar
+      }
+
+      // Wifi popup, dropped under the network icon
+      WifiPopup {
+        id: wifiPopup
         barWindow: bar
       }
     }
