@@ -67,7 +67,14 @@ ShellRoot {
         Network {}
         Volume {}
         VolumeSlider {}
-        Control {}
+        Control {
+          id: control
+          onClicked: {
+            var pos = control.mapToItem(null, 0, 0);
+            systemPopup.anchorX = Math.max(4, pos.x + control.width - systemPopup.implicitWidth);
+            systemPopup.toggle();
+          }
+        }
         Battery {}
         Clock {}
       }
@@ -77,6 +84,12 @@ ShellRoot {
         id: musicPopup
         barWindow: bar
         anchorX: 130
+      }
+
+      // System popup, dropped under the control switch
+      SystemPopup {
+        id: systemPopup
+        barWindow: bar
       }
     }
   }
