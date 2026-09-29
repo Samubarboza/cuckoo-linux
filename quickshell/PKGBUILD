@@ -1,0 +1,40 @@
+# Maintainer: Samubarboza <samubjunior95@gmail.com>
+
+# Bar and popups for Cuckoo Linux, made with Quickshell (QML).
+# Quickshell uses private Qt APIs, so it must be rebuilt on every Qt update
+# or it crashes from an ABI mismatch. Bump pkgrel when Qt changes.
+pkgname=quickshell
+pkgver=0.3.1
+pkgrel=1
+pkgdesc="Bar and popups for Cuckoo Linux"
+arch=('x86_64')
+url="https://github.com/quickshell-mirror/quickshell"
+license=('GPL-3.0-or-later')
+# tray needs status-notifier, music needs mpris, volume needs pipewire
+depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'wayland' 'libdrm' 'pipewire')
+makedepends=('cmake' 'ninja' 'pkgconf' 'qt6-shadertools' 'spirv-tools'
+             'wayland-protocols' 'cli11')
+options=('!debug')
+_upstream="quickshell-${pkgver}"
+source=("${_upstream}.tar.gz::https://github.com/quickshell-mirror/quickshell/archive/refs/tags/v${pkgver}.tar.gz")
+sha256sums=('218f6327293928bcb1f9b25728b336c4ab125f67fe1babd7d47313f890a16c99')
+
+# Only the features the bar uses stay on: wayland, tray, mpris and pipewire.
+build() {
+  cmake -GNinja -B build -S "${_upstream}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DDISTRIBUTOR="Cuckoo Linux" \
+    -DCRASH_HANDLER=OFF \
+    -DUSE_JEMALLOC=OFF \
+    -DX11=OFF \
+    -DSCREENCOPY=OFF \
+    -DSERVICE_PAM=OFF \
+    -DSERVICE_POLKIT=OFF
+  cmake --build build
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build
+  install -Dm 0644 -- "${_upstream}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

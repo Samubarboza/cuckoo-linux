@@ -7,13 +7,13 @@
 set -e -u
 
 project_dir="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")/..")"
-package_dirs=("desktop" "greeter" "eww")
+package_dirs=("desktop" "greeter" "eww" "quickshell")
 output_dir="${project_dir}/configs/cuckoo/airootfs/usr/local/share/cuckoo/packages"
 build_user="nobody"
 
-for required_command in makepkg fakeroot cargo pkg-config; do
+for required_command in makepkg fakeroot cargo cmake ninja pkg-config; do
   if ! command -v "${required_command}" &>/dev/null; then
-    printf "ERROR: '%s' was not found. Install 'base-devel' and 'rust'.\n" "${required_command}" >&2
+    printf "ERROR: '%s' was not found. Install 'base-devel', 'rust', 'cmake' and 'ninja'.\n" "${required_command}" >&2
     exit 1
   fi
 done
