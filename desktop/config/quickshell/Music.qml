@@ -14,6 +14,8 @@ Item {
   implicitWidth: visible ? Math.max(256, card.implicitWidth + 24) : 0
   implicitHeight: Theme.barHeight
 
+  signal activated
+
   Rectangle {
     id: card
     anchors.fill: parent
@@ -66,7 +68,10 @@ Item {
     onTapped: if (root.player)
       root.player.togglePlaying()
   }
-  // Left click opens the music popup, wired in T5
+  TapHandler {
+    acceptedButtons: Qt.LeftButton
+    onTapped: root.activated()
+  }
 
   function pickPlayer() {
     var players = Mpris.players.values;

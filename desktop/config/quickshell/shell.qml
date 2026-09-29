@@ -8,6 +8,7 @@ ShellRoot {
     model: Quickshell.screens
 
     PanelWindow {
+      id: bar
       required property var modelData
       screen: modelData
 
@@ -38,7 +39,9 @@ ShellRoot {
         ActiveWindow {
           screen: modelData
         }
-        Music {}
+        Music {
+          onActivated: musicPopup.toggle()
+        }
       }
 
       // Center: workspaces
@@ -67,6 +70,13 @@ ShellRoot {
         Control {}
         Battery {}
         Clock {}
+      }
+
+      // Music popup, dropped under the left side of the bar
+      MusicPopup {
+        id: musicPopup
+        barWindow: bar
+        anchorX: 130
       }
     }
   }
