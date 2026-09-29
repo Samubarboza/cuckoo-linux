@@ -57,6 +57,16 @@ ShellRoot {
         id: rightZone
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
+
+        Tray {}
+        Notifications {}
+        Weather {}
+        Network {}
+        Volume {}
+        VolumeSlider {}
+        Control {}
+        Battery {}
+        Clock {}
       }
     }
   }
