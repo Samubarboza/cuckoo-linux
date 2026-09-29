@@ -34,6 +34,11 @@ ShellRoot {
         id: leftZone
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
+
+        ActiveWindow {
+          screen: modelData
+        }
+        Music {}
       }
 
       // Center: workspaces
@@ -41,6 +46,10 @@ ShellRoot {
         id: centerZone
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
+
+        Workspaces {
+          screen: modelData
+        }
       }
 
       // Right: system icons, date and time
