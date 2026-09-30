@@ -32,7 +32,7 @@ Singleton {
   readonly property int cardRadius: 14
   readonly property color subtitle: Qt.rgba(1, 1, 1, 0.55)
   readonly property color cardFade0: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.0)
-  readonly property color cardFade1: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.55)
-  readonly property color cardFade2: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.78)
-  readonly property color cardFade3: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.85)
+  readonly property color cardFade1: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.86)
+  readonly property color cardFade2: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.95)
+  readonly property color cardFade3: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.98)
 }
