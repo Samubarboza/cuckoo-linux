@@ -38,7 +38,7 @@ BarItem {
     if (state === "disabled")
       return "󰖪";
     if (state.indexOf("wifi") === 0)
-      return "";
+      return "";
     if (state === "ethernet")
       return "󰌘";
     return "󰤮";

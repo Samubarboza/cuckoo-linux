@@ -8,7 +8,7 @@ BarItem {
   hpad: 9
 
   Text {
-    text: ""
+    text: ""
     color: Theme.text
     font.family: Theme.iconFont
     font.pixelSize: 15

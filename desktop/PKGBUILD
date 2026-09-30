@@ -9,7 +9,7 @@ url="https://github.com/Samubarboza/cuckoo-linux"
 license=('GPL-3.0-or-later')
 # What the Quickshell bar in config/quickshell uses
 depends=('quickshell' 'swaync'                       # the bar with its popups, and the notifications
-         'pavucontrol'                               # click on the volume opens the mixer
+         'upower'                                    # battery level
          'brightnessctl'                             # the brightness slider
          'ttf-jetbrains-mono-nerd' 'adwaita-fonts'   # the bar lines up with these fonts
          'noto-fonts-emoji')                         # the weather icon is an emoji
