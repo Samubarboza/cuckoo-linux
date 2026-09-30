@@ -1,7 +1,7 @@
 # Maintainer: Samubarboza <samubjunior95@gmail.com>
 
 pkgname=cuckoo-desktop
-pkgver=1.2.0
+pkgver=1.2.1
 pkgrel=1
 pkgdesc="Desktop settings for Cuckoo Linux"
 arch=('any')
@@ -11,6 +11,8 @@ license=('GPL-3.0-or-later')
 depends=('quickshell' 'swaync'                       # the bar with its popups, and the notifications
          'upower'                                    # battery level
          'brightnessctl'                             # the brightness slider
+         'qt6-svg'                                   # draws the svg app icons
+         'adwaita-icon-theme' 'hicolor-icon-theme'   # icons for the open apps
          'ttf-jetbrains-mono-nerd' 'adwaita-fonts'   # the bar lines up with these fonts
          'noto-fonts-emoji')                         # the weather icon is an emoji
 

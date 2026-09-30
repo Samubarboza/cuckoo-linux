@@ -1,3 +1,4 @@
+//@ pragma IconTheme Adwaita
 import Quickshell
 import QtQuick
 
@@ -39,7 +40,7 @@ ShellRoot {
         id: rightZone
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        Tray {}
+        AppList { id: appList; onOverflowClicked: { var p = appList.mapToItem(null, 0, 0); appsPopup.anchorX = Math.max(4, p.x); appsPopup.toggle(); } }
         Notifications {}
         Weather {}
         Network { id: network; onClicked: { var p = network.mapToItem(null, 0, 0); wifiPopup.anchorX = Math.max(4, p.x + network.width - wifiPopup.implicitWidth); wifiPopup.toggle(); } }
@@ -55,6 +56,7 @@ ShellRoot {
       WifiPopup { id: wifiPopup; barWindow: bar }
       VolumePopup { id: volumePopup; barWindow: bar }
       BrightnessPopup { id: brightnessPopup; barWindow: bar }
+      AppsPopup { id: appsPopup; barWindow: bar }
     }
   }
 }
