@@ -25,7 +25,7 @@ ShellRoot {
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         ActiveWindow { screen: modelData }
-        Music { onActivated: musicPopup.toggle() }
+        Music { id: music; onActivated: { var p = music.mapToItem(null, 0, 0); musicPopup.anchorX = Math.max(4, p.x); musicPopup.toggle(); } }
       }
 
       Row {
@@ -50,7 +50,7 @@ ShellRoot {
         Clock {}
       }
 
-      MusicPopup { id: musicPopup; barWindow: bar; anchorX: 130 }
+      MusicPopup { id: musicPopup; barWindow: bar }
       SystemPopup { id: systemPopup; barWindow: bar }
       WifiPopup { id: wifiPopup; barWindow: bar }
       VolumePopup { id: volumePopup; barWindow: bar }

@@ -11,7 +11,7 @@ Item {
   readonly property bool paused: player && player.playbackState === MprisPlaybackState.Paused
 
   visible: playing || paused
-  implicitWidth: visible ? Math.max(256, card.implicitWidth + 24) : 0
+  implicitWidth: visible ? card.implicitWidth + 24 : 0
   implicitHeight: Theme.barHeight
 
   signal activated
