@@ -18,17 +18,19 @@ logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-# Width used to center the status text, close to its longest line
-status_width=50
 total_steps=7
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
 screen_top_row=1
 left_pad=''
-status_pad=''
 screen_cols=0
 logo_centered=''
+# Colors. The console has only 16, so one palette slot gets the exact lavender
+color_accent=$'\033[35m'
+color_text=$'\033[37m'
+color_dim=$'\033[90m'
+color_reset=$'\033[0m'
 
 # The same list installs the system and counts the packages for the progress bar
 base_packages=(
@@ -57,9 +59,9 @@ fail() {
   # Keep the logo centered on top, like the other screens
   {
     printf '\033[2J\033[%s;1H' "${screen_top_row}"
-    [[ -n "${logo_centered}" ]] && printf '%s\n\n' "${logo_centered}"
-    print_centered_line "ERROR: $1"
-    print_centered_line "The details are in ${log_file}"
+    [[ -n "${logo_centered}" ]] && printf '%s%s%s\n\n' "${color_accent}" "${logo_centered}" "${color_reset}"
+    print_centered_line "ERROR: $1" "${color_text}"
+    print_centered_line "The details are in ${log_file}" "${color_text}"
   } >&2
   exit 1
 }
@@ -137,11 +139,6 @@ center_interface() {
   screen_top_row=$((top_margin + 1))
   printf -v left_pad '%*s' "${left_margin}" ''
 
-  # The status text centers on its own width, not the wider logo
-  local status_margin=$(((screen_width - status_width) / 2))
-  if ((status_margin < 0)); then status_margin=0; fi
-  printf -v status_pad '%*s' "${status_margin}" ''
-
   # Indent every logo line with the same margin, so it stays a block
   logo_centered=''
   while IFS= read -r line; do
@@ -150,28 +147,61 @@ center_interface() {
   logo_centered="${logo_centered%$'\n'}"
 }
 
-# Print one line centered on the screen. With no measured width it stays left.
+# The console has only 16 colors, so set one palette slot to the exact lavender
+setup_palette() {
+  printf '\033]P5B4BEFE'
+}
+
+# Print one line centered on the screen, in the given color. With no measured
+# width it stays at the left.
 print_centered_line() {
-  local text="$1" pad=0
+  local text="$1" color="${2:-}" pad=0
   if ((screen_cols > ${#text})); then pad=$(((screen_cols - ${#text}) / 2)); fi
-  printf '%*s%s\n' "${pad}" '' "${text}"
+  printf '%*s%s%s%s\n' "${pad}" '' "${color}" "${text}" "${color_reset}"
+}
+
+# Print already-colored content centered using its visible width, then clear the
+# rest of the line. The width is given because color codes take no space.
+print_at_center() {
+  local visible_width="$1" content="$2" pad=0
+  if ((screen_cols > visible_width)); then pad=$(((screen_cols - visible_width) / 2)); fi
+  printf '%*s%s\033[K' "${pad}" '' "${content}"
 }
 
 # Draw the whole screen again from the top, without clearing it first.
 # Each line erases what was there, so the logo stays still and nothing blinks.
 draw_screen() {
-  local title="$1" elapsed="$2" last_line="$3" percent="$4" progress_bar='' block filled_blocks
+  local title="$1" elapsed="$2" last_line="$3" percent="$4"
+  local block filled_blocks filled='' empty='' bar disk_line percent_text elapsed_text title_line
+
   filled_blocks=$((percent * bar_width / 100))
   for ((block = 0; block < bar_width; block++)); do
-    if ((block < filled_blocks)); then progress_bar+='█'; else progress_bar+='░'; fi
+    if ((block < filled_blocks)); then filled+='▓'; else empty+='░'; fi
   done
+  bar="${color_accent}${filled}${color_dim}${empty}${color_reset}"
 
   printf '\033[%s;1H' "${screen_top_row}"
-  [[ -n "${logo_centered}" ]] && printf '%s\n\n' "${logo_centered}"
-  printf '%sInstalling on %s\033[K\n\n' "${status_pad}" "${disk}"
-  printf '%s[%s]  %s%%\033[K\n\n' "${status_pad}" "${progress_bar}" "${percent}"
-  printf '%s%-40s %s\033[K\n' "${status_pad}" "${title}" "$(format_elapsed_time "${elapsed}")"
-  printf '%s%s\033[K\033[J' "${status_pad}" "${last_line}"
+  [[ -n "${logo_centered}" ]] && printf '%s%s%s\n\n' "${color_accent}" "${logo_centered}" "${color_reset}"
+
+  # Each line centers on its own width, so they sit symmetric under the logo
+  disk_line="Installing on ${disk}"
+  print_at_center "${#disk_line}" "${color_text}${disk_line}${color_reset}"
+  printf '\n\n'
+
+  # The percent is fixed to 3 places so the bar line never shifts
+  printf -v percent_text '%3s' "${percent}"
+  print_at_center "$((bar_width + 6))" "${bar}  ${color_text}${percent_text}%${color_reset}"
+  printf '\n\n'
+
+  # The time is fixed to 7 places so the title line never shifts
+  printf -v elapsed_text '%7s' "$(format_elapsed_time "${elapsed}")"
+  title_line="${title}  ${elapsed_text}"
+  print_at_center "${#title_line}" "${color_text}${title_line}${color_reset}"
+  printf '\n'
+
+  # The log line centers on a fixed width so it does not jump as it changes
+  print_at_center 60 "${color_dim}${last_line}${color_reset}"
+  printf '\033[J'
 }
 
 # Run a long command and keep the screen moving: the progress bar, the time it takes
@@ -330,6 +360,7 @@ center_interface
 
 : >"${log_file}"
 printf '\033[2J\033[H'
+setup_palette
 
 run_step 'Preparing the disk' prepare_disk
 find_partitions
@@ -408,21 +439,21 @@ umount -R -- "${target_dir}" >>"${log_file}" 2>&1 || true
 
 # A clean screen for the last message, with the logo still centered on top
 printf '\033[2J\033[%s;1H' "${screen_top_row}"
-[[ -n "${logo_centered}" ]] && printf '%s\n\n' "${logo_centered}"
-print_centered_line 'Done! Cuckoo Linux is installed.'
-print_centered_line 'Remove the USB drive.'
+[[ -n "${logo_centered}" ]] && printf '%s%s%s\n\n' "${color_accent}" "${logo_centered}" "${color_reset}"
+print_centered_line 'Done! Cuckoo Linux is installed.' "${color_text}"
+print_centered_line 'Remove the USB drive.' "${color_text}"
 printf '\n'
 if [[ -n "${desktop_warning}" ]]; then
-  print_centered_line 'The desktop settings were not installed.'
+  print_centered_line 'The desktop settings were not installed.' "${color_text}"
   printf '\n'
 fi
 if [[ -n "${drivers_warning}" ]]; then
-  print_centered_line 'The video drivers were not installed.'
-  print_centered_line 'Run cuckoo-hardware as root after the first boot.'
+  print_centered_line 'The video drivers were not installed.' "${color_text}"
+  print_centered_line 'Run cuckoo-hardware as root after the first boot.' "${color_text}"
   printf '\n'
 fi
 if [[ -n "${boot_warning}" ]]; then
-  print_centered_line 'The boot options were not fully set.'
+  print_centered_line 'The boot options were not fully set.' "${color_text}"
   printf '\n'
 fi
 
