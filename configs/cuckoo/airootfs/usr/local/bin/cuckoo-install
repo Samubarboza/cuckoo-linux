@@ -111,20 +111,17 @@ center_interface() {
   [[ -n "${logo}" ]] || return 0
   local size
   size="$(read_screen_size)" || return 0
-  local screen_height="${size% *}" screen_width="${size#* }"
+  local screen_width="${size#* }"
 
-  local logo_width=0 logo_lines=0 line
+  local logo_width=0 line
   while IFS= read -r line; do
     if ((${#line} > logo_width)); then logo_width="${#line}"; fi
-    logo_lines=$((logo_lines + 1))
   done <<<"${logo}"
 
-  # The block is the logo, its blank line, and six fixed rows below it
-  local block_height=$((logo_lines + 1 + 6))
+  # A small top margin, like the configurator, so the block sits near the top
   local left_margin=$(((screen_width - logo_width) / 2))
-  local top_margin=$(((screen_height - block_height) / 2))
+  local top_margin=2
   if ((left_margin < 0)); then left_margin=0; fi
-  if ((top_margin < 0)); then top_margin=0; fi
 
   screen_top_row=$((top_margin + 1))
   printf -v left_pad '%*s' "${left_margin}" ''
