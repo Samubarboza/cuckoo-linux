@@ -14,12 +14,23 @@ hardware_script="/usr/local/bin/cuckoo-hardware"
 hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
 desktop_packages_dir="/usr/local/share/cuckoo/packages"
 logo_file="/usr/local/share/cuckoo/logo.txt"
+logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
 total_steps=7
 steps_done=0
 packages_total=0
+# Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
+screen_top_row=1
+left_pad=''
+screen_cols=0
+logo_centered=''
+# Colors. The console has only 16, so one palette slot gets the exact lavender
+color_accent=$'\033[35m'
+color_text=$'\033[37m'
+color_dim=$'\033[90m'
+color_reset=$'\033[0m'
 
 # The same list installs the system and counts the packages for the progress bar
 base_packages=(
@@ -45,9 +56,13 @@ save_log_to_disk() {
 
 fail() {
   save_log_to_disk
-  printf '\033[2J\033[H'
-  printf 'ERROR: %s\n' "$1" >&2
-  printf 'The details are in %s\n' "${log_file}" >&2
+  # Keep the logo centered on top, like the other screens
+  {
+    printf '\033[2J\033[%s;1H' "${screen_top_row}"
+    [[ -n "${logo_centered}" ]] && printf '%s%s%s\n\n' "${color_accent}" "${logo_centered}" "${color_reset}"
+    print_centered_line "ERROR: $1" "${color_text}"
+    print_centered_line "The details are in ${log_file}" "${color_text}"
+  } >&2
   exit 1
 }
 
@@ -87,21 +102,106 @@ base_system_percent() {
   printf '%s' "$((installed * 100 / packages_total))"
 }
 
+# Read the screen size. Try tput first, then stty. Empty if neither works.
+read_screen_size() {
+  local height width size
+  height="$(tput lines 2>/dev/null || true)"
+  width="$(tput cols 2>/dev/null || true)"
+  if [[ ! "${height}" =~ ^[0-9]+$ || ! "${width}" =~ ^[0-9]+$ ]]; then
+    size="$(stty size 2>/dev/null || true)"
+    height="${size% *}"
+    width="${size#* }"
+  fi
+  [[ "${height}" =~ ^[0-9]+$ && "${width}" =~ ^[0-9]+$ ]] || return 1
+  printf '%s %s' "${height}" "${width}"
+}
+
+# Measure the screen once and set where the interface block starts, so it stays
+# centered. The logo is the widest part, so it anchors the horizontal margin.
+# If there is no logo or the size can not be read, it stays at the top left.
+center_interface() {
+  [[ -n "${logo}" ]] || return 0
+  local size
+  size="$(read_screen_size)" || return 0
+  local screen_width="${size#* }"
+  screen_cols="${screen_width}"
+
+  local logo_width=0 line
+  while IFS= read -r line; do
+    if ((${#line} > logo_width)); then logo_width="${#line}"; fi
+  done <<<"${logo}"
+
+  # A small top margin, like the configurator, so the block sits near the top
+  local left_margin=$(((screen_width - logo_width) / 2))
+  local top_margin=2
+  if ((left_margin < 0)); then left_margin=0; fi
+
+  screen_top_row=$((top_margin + 1))
+  printf -v left_pad '%*s' "${left_margin}" ''
+
+  # Indent every logo line with the same margin, so it stays a block
+  logo_centered=''
+  while IFS= read -r line; do
+    logo_centered+="${left_pad}${line}"$'\n'
+  done <<<"${logo}"
+  logo_centered="${logo_centered%$'\n'}"
+}
+
+# The console has only 16 colors, so set one palette slot to the exact lavender
+setup_palette() {
+  printf '\033]P5B4BEFE'
+}
+
+# Print one line centered on the screen, in the given color. With no measured
+# width it stays at the left.
+print_centered_line() {
+  local text="$1" color="${2:-}" pad=0
+  if ((screen_cols > ${#text})); then pad=$(((screen_cols - ${#text}) / 2)); fi
+  printf '%*s%s%s%s\n' "${pad}" '' "${color}" "${text}" "${color_reset}"
+}
+
+# Print already-colored content centered using its visible width, then clear the
+# rest of the line. The width is given because color codes take no space.
+print_at_center() {
+  local visible_width="$1" content="$2" pad=0
+  if ((screen_cols > visible_width)); then pad=$(((screen_cols - visible_width) / 2)); fi
+  printf '%*s%s\033[K' "${pad}" '' "${content}"
+}
+
 # Draw the whole screen again from the top, without clearing it first.
 # Each line erases what was there, so the logo stays still and nothing blinks.
 draw_screen() {
-  local title="$1" elapsed="$2" last_line="$3" percent="$4" progress_bar='' block filled_blocks
+  local title="$1" elapsed="$2" last_line="$3" percent="$4"
+  local block filled_blocks filled='' empty='' bar disk_line percent_text elapsed_text title_line
+
   filled_blocks=$((percent * bar_width / 100))
   for ((block = 0; block < bar_width; block++)); do
-    if ((block < filled_blocks)); then progress_bar+='█'; else progress_bar+='░'; fi
+    if ((block < filled_blocks)); then filled+='▓'; else empty+='░'; fi
   done
+  bar="${color_accent}${filled}${color_dim}${empty}${color_reset}"
 
-  printf '\033[H'
-  [[ -n "${logo}" ]] && printf '%s\n\n' "${logo}"
-  printf 'Installing on %s\033[K\n\n' "${disk}"
-  printf '[%s]  %s%%\033[K\n\n' "${progress_bar}" "${percent}"
-  printf '%-40s %s\033[K\n' "${title}" "$(format_elapsed_time "${elapsed}")"
-  printf '%s\033[K\033[J' "${last_line}"
+  printf '\033[%s;1H' "${screen_top_row}"
+  [[ -n "${logo_centered}" ]] && printf '%s%s%s\n\n' "${color_accent}" "${logo_centered}" "${color_reset}"
+
+  # Each line centers on its own width, so they sit symmetric under the logo
+  disk_line="Installing on ${disk}"
+  print_at_center "${#disk_line}" "${color_text}${disk_line}${color_reset}"
+  printf '\n\n'
+
+  # The percent is fixed to 3 places so the bar line never shifts
+  printf -v percent_text '%3s' "${percent}"
+  print_at_center "$((bar_width + 6))" "${bar}  ${color_text}${percent_text}%${color_reset}"
+  printf '\n\n'
+
+  # The time is fixed to 7 places so the title line never shifts
+  printf -v elapsed_text '%7s' "$(format_elapsed_time "${elapsed}")"
+  title_line="${title}  ${elapsed_text}"
+  print_at_center "${#title_line}" "${color_text}${title_line}${color_reset}"
+  printf '\n'
+
+  # The log line centers on a fixed width so it does not jump as it changes
+  print_at_center 60 "${color_dim}${last_line}${color_reset}"
+  printf '\033[J'
 }
 
 # Run a long command and keep the screen moving: the progress bar, the time it takes
@@ -253,10 +353,14 @@ esp_partition=""
 root_partition=""
 
 logo=''
-[[ -f "${logo_file}" ]] && logo="$(<"${logo_file}")"
+[[ -f "${logo_big_file}" ]] && logo="$(<"${logo_big_file}")"
+# Default to the raw logo, then center it if the screen can be measured
+logo_centered="${logo}"
+center_interface
 
 : >"${log_file}"
 printf '\033[2J\033[H'
+setup_palette
 
 run_step 'Preparing the disk' prepare_disk
 find_partitions
@@ -268,9 +372,9 @@ packages_total="$(count_target_packages)"
 run_step --progress base_system_percent 'Installing the base system' \
   setsid --wait archinstall --silent --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
 
-# The console login reads this file, the login screen has its own image
-if [[ -n "${logo}" ]]; then
-  printf '%s\n\n' "${logo}" >"${target_dir}/etc/issue"
+# The console login shows the normal logo; the installer screen uses the big one
+if [[ -f "${logo_file}" ]]; then
+  printf '%s\n\n' "$(<"${logo_file}")" >"${target_dir}/etc/issue"
 fi
 
 # Turn off the blinking console cursor so it does not show in the black moment
@@ -333,19 +437,24 @@ save_log_to_disk
 # The data is already on the disk, so a failed unmount only goes to the log
 umount -R -- "${target_dir}" >>"${log_file}" 2>&1 || true
 
-# A clean screen for the last message
-printf '\033[2J\033[H'
-printf 'Done! Cuckoo Linux is installed.\n'
-printf 'Remove the USB drive.\n\n'
+# A clean screen for the last message, with the logo still centered on top
+printf '\033[2J\033[%s;1H' "${screen_top_row}"
+[[ -n "${logo_centered}" ]] && printf '%s%s%s\n\n' "${color_accent}" "${logo_centered}" "${color_reset}"
+print_centered_line 'Done! Cuckoo Linux is installed.' "${color_text}"
+print_centered_line 'Remove the USB drive.' "${color_text}"
+printf '\n'
 if [[ -n "${desktop_warning}" ]]; then
-  printf 'The desktop settings were not installed.\n\n'
+  print_centered_line 'The desktop settings were not installed.' "${color_text}"
+  printf '\n'
 fi
 if [[ -n "${drivers_warning}" ]]; then
-  printf 'The video drivers were not installed.\n'
-  printf 'Run cuckoo-hardware as root after the first boot.\n\n'
+  print_centered_line 'The video drivers were not installed.' "${color_text}"
+  print_centered_line 'Run cuckoo-hardware as root after the first boot.' "${color_text}"
+  printf '\n'
 fi
 if [[ -n "${boot_warning}" ]]; then
-  printf 'The boot options were not fully set.\n\n'
+  print_centered_line 'The boot options were not fully set.' "${color_text}"
+  printf '\n'
 fi
 
 if gum confirm 'Reboot now?' --affirmative 'Reboot now' --negative 'Go to the console'; then

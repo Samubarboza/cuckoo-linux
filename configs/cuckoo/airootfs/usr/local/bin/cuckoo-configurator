@@ -8,8 +8,10 @@
 set -e -u
 
 answers_dir="${CUCKOO_ANSWERS_DIR:-/tmp/cuckoo}"
-logo_file="/usr/local/share/cuckoo/logo.txt"
-screen_width=70
+logo_file="/usr/local/share/cuckoo/logo-big.txt"
+# Center across the real screen width, fall back to 70 if it can not be read
+screen_width="$(tput cols 2>/dev/null || true)"
+[[ "${screen_width}" =~ ^[0-9]+$ ]] || screen_width=70
 
 cancel_install() {
   printf '\nInstall cancelled. Nothing was changed.\n'
@@ -19,10 +21,12 @@ cancel_install() {
 show_title() {
   # Clear the screen without needing a terminal database
   printf '\033[2J\033[H'
+  # A little space on top so the logo does not touch the ceiling
+  printf '\n\n'
   if [[ -f "${logo_file}" ]]; then
     gum style --foreground 15 --align center --width "${screen_width}" "$(<"${logo_file}")"
   fi
-  gum style --align center --width "${screen_width}" --foreground 8 "Arch Linux for developers"
+  gum style --align center --width "${screen_width}" --foreground 8 "Ready to build"
   printf '\n'
 }
 
