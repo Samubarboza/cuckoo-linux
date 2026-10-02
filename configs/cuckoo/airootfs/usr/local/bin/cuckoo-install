@@ -18,12 +18,15 @@ logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
+# Width used to center the status text, close to its longest line
+status_width=50
 total_steps=7
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
 screen_top_row=1
 left_pad=''
+status_pad=''
 screen_cols=0
 logo_centered=''
 
@@ -134,6 +137,11 @@ center_interface() {
   screen_top_row=$((top_margin + 1))
   printf -v left_pad '%*s' "${left_margin}" ''
 
+  # The status text centers on its own width, not the wider logo
+  local status_margin=$(((screen_width - status_width) / 2))
+  if ((status_margin < 0)); then status_margin=0; fi
+  printf -v status_pad '%*s' "${status_margin}" ''
+
   # Indent every logo line with the same margin, so it stays a block
   logo_centered=''
   while IFS= read -r line; do
@@ -160,10 +168,10 @@ draw_screen() {
 
   printf '\033[%s;1H' "${screen_top_row}"
   [[ -n "${logo_centered}" ]] && printf '%s\n\n' "${logo_centered}"
-  printf '%sInstalling on %s\033[K\n\n' "${left_pad}" "${disk}"
-  printf '%s[%s]  %s%%\033[K\n\n' "${left_pad}" "${progress_bar}" "${percent}"
-  printf '%s%-40s %s\033[K\n' "${left_pad}" "${title}" "$(format_elapsed_time "${elapsed}")"
-  printf '%s%s\033[K\033[J' "${left_pad}" "${last_line}"
+  printf '%sInstalling on %s\033[K\n\n' "${status_pad}" "${disk}"
+  printf '%s[%s]  %s%%\033[K\n\n' "${status_pad}" "${progress_bar}" "${percent}"
+  printf '%s%-40s %s\033[K\n' "${status_pad}" "${title}" "$(format_elapsed_time "${elapsed}")"
+  printf '%s%s\033[K\033[J' "${status_pad}" "${last_line}"
 }
 
 # Run a long command and keep the screen moving: the progress bar, the time it takes
