@@ -21,6 +21,8 @@ cancel_install() {
 show_title() {
   # Clear the screen without needing a terminal database
   printf '\033[2J\033[H'
+  # A little space on top so the logo does not touch the ceiling
+  printf '\n\n'
   if [[ -f "${logo_file}" ]]; then
     gum style --foreground 15 --align center --width "${screen_width}" "$(<"${logo_file}")"
   fi
