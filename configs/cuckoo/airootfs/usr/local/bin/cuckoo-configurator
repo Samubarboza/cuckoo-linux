@@ -8,7 +8,7 @@
 set -e -u
 
 answers_dir="${CUCKOO_ANSWERS_DIR:-/tmp/cuckoo}"
-logo_file="/usr/local/share/cuckoo/logo.txt"
+logo_file="/usr/local/share/cuckoo/logo-big.txt"
 # Center across the real screen width, fall back to 70 if it can not be read
 screen_width="$(tput cols 2>/dev/null || true)"
 [[ "${screen_width}" =~ ^[0-9]+$ ]] || screen_width=70
