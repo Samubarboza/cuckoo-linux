@@ -24,7 +24,7 @@ show_title() {
   if [[ -f "${logo_file}" ]]; then
     gum style --foreground 15 --align center --width "${screen_width}" "$(<"${logo_file}")"
   fi
-  gum style --align center --width "${screen_width}" --foreground 8 "Arch Linux for developers"
+  gum style --align center --width "${screen_width}" --foreground 8 "Ready to build"
   printf '\n'
 }
 
