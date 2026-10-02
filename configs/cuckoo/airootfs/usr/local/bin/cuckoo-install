@@ -14,6 +14,7 @@ hardware_script="/usr/local/bin/cuckoo-hardware"
 hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
 desktop_packages_dir="/usr/local/share/cuckoo/packages"
 logo_file="/usr/local/share/cuckoo/logo.txt"
+logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
@@ -314,7 +315,7 @@ esp_partition=""
 root_partition=""
 
 logo=''
-[[ -f "${logo_file}" ]] && logo="$(<"${logo_file}")"
+[[ -f "${logo_big_file}" ]] && logo="$(<"${logo_big_file}")"
 # Default to the raw logo, then center it if the screen can be measured
 logo_centered="${logo}"
 center_interface
@@ -332,9 +333,9 @@ packages_total="$(count_target_packages)"
 run_step --progress base_system_percent 'Installing the base system' \
   setsid --wait archinstall --silent --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
 
-# The console login reads this file, the login screen has its own image
-if [[ -n "${logo}" ]]; then
-  printf '%s\n\n' "${logo}" >"${target_dir}/etc/issue"
+# The console login shows the normal logo; the installer screen uses the big one
+if [[ -f "${logo_file}" ]]; then
+  printf '%s\n\n' "$(<"${logo_file}")" >"${target_dir}/etc/issue"
 fi
 
 # Turn off the blinking console cursor so it does not show in the black moment
