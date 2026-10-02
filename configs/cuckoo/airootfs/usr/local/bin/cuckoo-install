@@ -23,6 +23,7 @@ packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
 screen_top_row=1
 left_pad=''
+screen_cols=0
 
 # The same list installs the system and counts the packages for the progress bar
 base_packages=(
@@ -112,6 +113,7 @@ center_interface() {
   local size
   size="$(read_screen_size)" || return 0
   local screen_width="${size#* }"
+  screen_cols="${screen_width}"
 
   local logo_width=0 line
   while IFS= read -r line; do
@@ -132,6 +134,13 @@ center_interface() {
     logo_centered+="${left_pad}${line}"$'\n'
   done <<<"${logo}"
   logo_centered="${logo_centered%$'\n'}"
+}
+
+# Print one line centered on the screen. With no measured width it stays left.
+print_centered_line() {
+  local text="$1" pad=0
+  if ((screen_cols > ${#text})); then pad=$(((screen_cols - ${#text}) / 2)); fi
+  printf '%*s%s\n' "${pad}" '' "${text}"
 }
 
 # Draw the whole screen again from the top, without clearing it first.
@@ -383,19 +392,24 @@ save_log_to_disk
 # The data is already on the disk, so a failed unmount only goes to the log
 umount -R -- "${target_dir}" >>"${log_file}" 2>&1 || true
 
-# A clean screen for the last message
-printf '\033[2J\033[H'
-printf 'Done! Cuckoo Linux is installed.\n'
-printf 'Remove the USB drive.\n\n'
+# A clean screen for the last message, with the logo still centered on top
+printf '\033[2J\033[%s;1H' "${screen_top_row}"
+[[ -n "${logo_centered}" ]] && printf '%s\n\n' "${logo_centered}"
+print_centered_line 'Done! Cuckoo Linux is installed.'
+print_centered_line 'Remove the USB drive.'
+printf '\n'
 if [[ -n "${desktop_warning}" ]]; then
-  printf 'The desktop settings were not installed.\n\n'
+  print_centered_line 'The desktop settings were not installed.'
+  printf '\n'
 fi
 if [[ -n "${drivers_warning}" ]]; then
-  printf 'The video drivers were not installed.\n'
-  printf 'Run cuckoo-hardware as root after the first boot.\n\n'
+  print_centered_line 'The video drivers were not installed.'
+  print_centered_line 'Run cuckoo-hardware as root after the first boot.'
+  printf '\n'
 fi
 if [[ -n "${boot_warning}" ]]; then
-  printf 'The boot options were not fully set.\n\n'
+  print_centered_line 'The boot options were not fully set.'
+  printf '\n'
 fi
 
 if gum confirm 'Reboot now?' --affirmative 'Reboot now' --negative 'Go to the console'; then
