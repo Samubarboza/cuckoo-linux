@@ -24,6 +24,7 @@ packages_total=0
 screen_top_row=1
 left_pad=''
 screen_cols=0
+logo_centered=''
 
 # The same list installs the system and counts the packages for the progress bar
 base_packages=(
@@ -49,9 +50,13 @@ save_log_to_disk() {
 
 fail() {
   save_log_to_disk
-  printf '\033[2J\033[H'
-  printf 'ERROR: %s\n' "$1" >&2
-  printf 'The details are in %s\n' "${log_file}" >&2
+  # Keep the logo centered on top, like the other screens
+  {
+    printf '\033[2J\033[%s;1H' "${screen_top_row}"
+    [[ -n "${logo_centered}" ]] && printf '%s\n\n' "${logo_centered}"
+    print_centered_line "ERROR: $1"
+    print_centered_line "The details are in ${log_file}"
+  } >&2
   exit 1
 }
 
