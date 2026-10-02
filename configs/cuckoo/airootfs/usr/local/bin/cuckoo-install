@@ -20,6 +20,9 @@ bar_width=26
 total_steps=7
 steps_done=0
 packages_total=0
+# Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
+screen_top_row=1
+left_pad=''
 
 # The same list installs the system and counts the packages for the progress bar
 base_packages=(
@@ -87,6 +90,53 @@ base_system_percent() {
   printf '%s' "$((installed * 100 / packages_total))"
 }
 
+# Read the screen size. Try tput first, then stty. Empty if neither works.
+read_screen_size() {
+  local height width size
+  height="$(tput lines 2>/dev/null || true)"
+  width="$(tput cols 2>/dev/null || true)"
+  if [[ ! "${height}" =~ ^[0-9]+$ || ! "${width}" =~ ^[0-9]+$ ]]; then
+    size="$(stty size 2>/dev/null || true)"
+    height="${size% *}"
+    width="${size#* }"
+  fi
+  [[ "${height}" =~ ^[0-9]+$ && "${width}" =~ ^[0-9]+$ ]] || return 1
+  printf '%s %s' "${height}" "${width}"
+}
+
+# Measure the screen once and set where the interface block starts, so it stays
+# centered. The logo is the widest part, so it anchors the horizontal margin.
+# If there is no logo or the size can not be read, it stays at the top left.
+center_interface() {
+  [[ -n "${logo}" ]] || return 0
+  local size
+  size="$(read_screen_size)" || return 0
+  local screen_height="${size% *}" screen_width="${size#* }"
+
+  local logo_width=0 logo_lines=0 line
+  while IFS= read -r line; do
+    if ((${#line} > logo_width)); then logo_width="${#line}"; fi
+    logo_lines=$((logo_lines + 1))
+  done <<<"${logo}"
+
+  # The block is the logo, its blank line, and six fixed rows below it
+  local block_height=$((logo_lines + 1 + 6))
+  local left_margin=$(((screen_width - logo_width) / 2))
+  local top_margin=$(((screen_height - block_height) / 2))
+  if ((left_margin < 0)); then left_margin=0; fi
+  if ((top_margin < 0)); then top_margin=0; fi
+
+  screen_top_row=$((top_margin + 1))
+  printf -v left_pad '%*s' "${left_margin}" ''
+
+  # Indent every logo line with the same margin, so it stays a block
+  logo_centered=''
+  while IFS= read -r line; do
+    logo_centered+="${left_pad}${line}"$'\n'
+  done <<<"${logo}"
+  logo_centered="${logo_centered%$'\n'}"
+}
+
 # Draw the whole screen again from the top, without clearing it first.
 # Each line erases what was there, so the logo stays still and nothing blinks.
 draw_screen() {
@@ -96,12 +146,12 @@ draw_screen() {
     if ((block < filled_blocks)); then progress_bar+='█'; else progress_bar+='░'; fi
   done
 
-  printf '\033[H'
-  [[ -n "${logo}" ]] && printf '%s\n\n' "${logo}"
-  printf 'Installing on %s\033[K\n\n' "${disk}"
-  printf '[%s]  %s%%\033[K\n\n' "${progress_bar}" "${percent}"
-  printf '%-40s %s\033[K\n' "${title}" "$(format_elapsed_time "${elapsed}")"
-  printf '%s\033[K\033[J' "${last_line}"
+  printf '\033[%s;1H' "${screen_top_row}"
+  [[ -n "${logo_centered}" ]] && printf '%s\n\n' "${logo_centered}"
+  printf '%sInstalling on %s\033[K\n\n' "${left_pad}" "${disk}"
+  printf '%s[%s]  %s%%\033[K\n\n' "${left_pad}" "${progress_bar}" "${percent}"
+  printf '%s%-40s %s\033[K\n' "${left_pad}" "${title}" "$(format_elapsed_time "${elapsed}")"
+  printf '%s%s\033[K\033[J' "${left_pad}" "${last_line}"
 }
 
 # Run a long command and keep the screen moving: the progress bar, the time it takes
@@ -254,6 +304,9 @@ root_partition=""
 
 logo=''
 [[ -f "${logo_file}" ]] && logo="$(<"${logo_file}")"
+# Default to the raw logo, then center it if the screen can be measured
+logo_centered="${logo}"
+center_interface
 
 : >"${log_file}"
 printf '\033[2J\033[H'
