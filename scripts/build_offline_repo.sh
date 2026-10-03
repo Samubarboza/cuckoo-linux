@@ -9,7 +9,7 @@
 set -euo pipefail
 
 project_dir="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")/..")"
-offline_repo_dir="${project_dir}/configs/cuckoo/airootfs/usr/local/share/cuckoo/offline-repo"
+offline_repo_dir="${project_dir}/configs/cuckoo/isofs/offline-repo"
 package_list_file="${project_dir}/configs/cuckoo/airootfs/usr/local/share/cuckoo/offline-packages.txt"
 repo_database="${offline_repo_dir}/cuckoo-offline.db.tar.gz"
 yay_aur_url="https://aur.archlinux.org/yay.git"
