@@ -72,6 +72,10 @@ build_yay
 printf 'Downloading the packages...\n'
 download_packages
 
+# The repo uses SigLevel Optional TrustAll, so the signatures are never checked.
+# Drop them to halve the file count and make the ISO smaller.
+rm -f -- "${offline_repo_dir}"/*.pkg.tar.zst.sig
+
 printf 'Making the repo database...\n'
 repo-add -- "${repo_database}" "${offline_repo_dir}"/*.pkg.tar.zst
 
