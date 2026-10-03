@@ -340,9 +340,8 @@ locale="$(read_answer locale)"
 username="$(read_answer username)"
 password="$(read_answer password)"
 timezone="$(read_answer timezone)"
-terminal="$(read_answer terminal)"
 
-base_packages+=(hyprland swaybg "${terminal}" greetd)
+base_packages+=(hyprland swaybg alacritty greetd)
 
 [[ -b "${disk}" ]] || fail "'${disk}' is not a disk."
 if findmnt --source "${disk}" &>/dev/null || findmnt "${disk}"* &>/dev/null; then
@@ -404,9 +403,6 @@ install_desktop_package() {
     --noconfirm -U -- "${desktop_packages_dir}"/{cuckoo-desktop,cuckoo-greeter,quickshell}-[0-9]*.pkg.tar.zst || return 1
   # archinstall already made the user, so /etc/skel reached it too late
   arch-chroot "${target_dir}" cp -r --no-target-directory /etc/skel "/home/${username}" || return 1
-  # The settings ship with a default terminal, put in the chosen one
-  sed -i "s|^\$terminal = .*|\$terminal = ${terminal}|" \
-    "${target_dir}/home/${username}/.config/hypr/hyprland.conf" || return 1
   arch-chroot "${target_dir}" chown -R "${username}:" "/home/${username}" || return 1
   # Only now, so a broken desktop leaves the plain console login working.
   # graphical.target is what pulls in the login screen, the console one does not.
