@@ -60,8 +60,10 @@ download_packages() {
 
   mapfile -t packages < <(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "${package_list_file}")
 
+  # --disable-sandbox so pacman can write to our own dbpath and cachedir inside
+  # the builder. The download is controlled here, not from an untrusted place.
   pacman -Syw --dbpath "${temporary_db}" --cachedir "${offline_repo_dir}" \
-    --noconfirm -- "${packages[@]}"
+    --disable-sandbox --noconfirm -- "${packages[@]}"
 }
 
 printf 'Compiling yay...\n'
