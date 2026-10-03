@@ -14,12 +14,13 @@ hardware_script="/usr/local/bin/cuckoo-hardware"
 hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
 desktop_packages_dir="/usr/local/share/cuckoo/packages"
 package_list_file="/usr/local/share/cuckoo/offline-packages.txt"
+target_mirrorlist_file="/usr/local/share/cuckoo/mirrorlist"
 logo_file="/usr/local/share/cuckoo/logo.txt"
 logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=7
+total_steps=8
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
@@ -370,6 +371,32 @@ if [[ -f "${logo_file}" ]]; then
   printf '%s\n\n' "$(<"${logo_file}")" >"${target_dir}/etc/issue"
 fi
 
+# The install reads from the offline repo, but the installed system updates from the
+# internet, so give it the normal Arch repos and a mirror list that ships in the ISO.
+configure_target_repos() {
+  install -Dm 644 -- "${target_mirrorlist_file}" "${target_dir}/etc/pacman.d/mirrorlist" || return 1
+  cat >"${target_dir}/etc/pacman.conf" <<'EOF' || return 1
+[options]
+HoldPkg     = pacman glibc
+Architecture = auto
+ParallelDownloads = 5
+SigLevel    = Required DatabaseOptional
+LocalFileSigLevel = Optional
+
+[core]
+Include = /etc/pacman.d/mirrorlist
+
+[extra]
+Include = /etc/pacman.d/mirrorlist
+EOF
+}
+
+# The updates are not needed to boot, so a failure only warns
+update_warning=''
+if ! run_step --may-fail 'Setting up the updates' configure_target_repos; then
+  update_warning='yes'
+fi
+
 # Turn off the blinking console cursor so it does not show in the black moment
 # between the login and the desktop. It does not hide the boot messages.
 # grub-mkconfig writes a temp file and only replaces grub.cfg on success, so a
@@ -444,6 +471,10 @@ if [[ -n "${drivers_warning}" ]]; then
 fi
 if [[ -n "${boot_warning}" ]]; then
   print_centered_line 'The boot options were not fully set.' "${color_text}"
+  printf '\n'
+fi
+if [[ -n "${update_warning}" ]]; then
+  print_centered_line 'The update settings were not fully set.' "${color_text}"
   printf '\n'
 fi
 
