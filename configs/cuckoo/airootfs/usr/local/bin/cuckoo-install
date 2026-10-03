@@ -13,12 +13,14 @@ log_file="${answers_dir}/install.log"
 hardware_script="/usr/local/bin/cuckoo-hardware"
 hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
 desktop_packages_dir="/usr/local/share/cuckoo/packages"
+package_list_file="/usr/local/share/cuckoo/offline-packages.txt"
+target_mirrorlist_file="/usr/local/share/cuckoo/mirrorlist"
 logo_file="/usr/local/share/cuckoo/logo.txt"
 logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=7
+total_steps=8
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
@@ -32,18 +34,13 @@ color_text=$'\033[37m'
 color_dim=$'\033[90m'
 color_reset=$'\033[0m'
 
-# The same list installs the system and counts the packages for the progress bar
-base_packages=(
-  base linux linux-firmware mkinitcpio
-  grub efibootmgr
-  intel-ucode amd-ucode
-  btrfs-progs
-  networkmanager wireless-regdb
-  pipewire pipewire-pulse wireplumber
-  bluez bluez-utils
-  sudo git nano
-  python python-pip
-)
+# The same list installs the system and counts the packages for the progress bar.
+# It is the same file the offline repo is built from, so build and install match.
+if [[ ! -f "${package_list_file}" ]]; then
+  printf 'ERROR: %s was not found.\n' "${package_list_file}" >&2
+  exit 1
+fi
+mapfile -t base_packages < <(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "${package_list_file}")
 
 # The log lives in memory and is lost on reboot, so keep a copy on the disk
 save_log_to_disk() {
@@ -313,7 +310,7 @@ write_archinstall_files() {
   "ntp": true,
   "packages": ${packages_json},
   "profile_config": null,
-  "services": ["bluetooth"],
+  "services": ["bluetooth", "docker"],
   "swap": { "enabled": true, "algorithm": "zstd" },
   "timezone": "${timezone}"
 }
@@ -323,7 +320,7 @@ EOF
   # The values go in the environment, so they are not shown in the process list.
   CUCKOO_USERNAME="${username}" CUCKOO_PASSWORD="${password}" python3 -c '
 import json, os
-user = {"username": os.environ["CUCKOO_USERNAME"], "!password": os.environ["CUCKOO_PASSWORD"], "sudo": True, "groups": []}
+user = {"username": os.environ["CUCKOO_USERNAME"], "!password": os.environ["CUCKOO_PASSWORD"], "sudo": True, "groups": ["docker"]}
 print(json.dumps({"!users": [user]}, indent=2))
 ' >"${answers_dir}/credentials.json" || fail 'the user settings could not be written.'
   chmod 600 -- "${answers_dir}/credentials.json"
@@ -340,8 +337,6 @@ locale="$(read_answer locale)"
 username="$(read_answer username)"
 password="$(read_answer password)"
 timezone="$(read_answer timezone)"
-
-base_packages+=(hyprland swaybg alacritty greetd)
 
 [[ -b "${disk}" ]] || fail "'${disk}' is not a disk."
 if findmnt --source "${disk}" &>/dev/null || findmnt "${disk}"* &>/dev/null; then
@@ -374,6 +369,32 @@ run_step --progress base_system_percent 'Installing the base system' \
 # The console login shows the normal logo; the installer screen uses the big one
 if [[ -f "${logo_file}" ]]; then
   printf '%s\n\n' "$(<"${logo_file}")" >"${target_dir}/etc/issue"
+fi
+
+# The install reads from the offline repo, but the installed system updates from the
+# internet, so give it the normal Arch repos and a mirror list that ships in the ISO.
+configure_target_repos() {
+  install -Dm 644 -- "${target_mirrorlist_file}" "${target_dir}/etc/pacman.d/mirrorlist" || return 1
+  cat >"${target_dir}/etc/pacman.conf" <<'EOF' || return 1
+[options]
+HoldPkg     = pacman glibc
+Architecture = auto
+ParallelDownloads = 5
+SigLevel    = Required DatabaseOptional
+LocalFileSigLevel = Optional
+
+[core]
+Include = /etc/pacman.d/mirrorlist
+
+[extra]
+Include = /etc/pacman.d/mirrorlist
+EOF
+}
+
+# The updates are not needed to boot, so a failure only warns
+update_warning=''
+if ! run_step --may-fail 'Setting up the updates' configure_target_repos; then
+  update_warning='yes'
 fi
 
 # Turn off the blinking console cursor so it does not show in the black moment
@@ -450,6 +471,10 @@ if [[ -n "${drivers_warning}" ]]; then
 fi
 if [[ -n "${boot_warning}" ]]; then
   print_centered_line 'The boot options were not fully set.' "${color_text}"
+  printf '\n'
+fi
+if [[ -n "${update_warning}" ]]; then
+  print_centered_line 'The update settings were not fully set.' "${color_text}"
   printf '\n'
 fi
 

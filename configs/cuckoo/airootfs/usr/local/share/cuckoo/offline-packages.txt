@@ -1,0 +1,61 @@
+# Packages for the offline repo. The build downloads them, the installer installs them.
+# One per line. Empty lines and lines starting with # are ignored.
+
+# Base system
+base
+linux
+linux-firmware
+mkinitcpio
+zram-generator
+grub
+efibootmgr
+intel-ucode
+amd-ucode
+btrfs-progs
+networkmanager
+wireless-regdb
+pipewire
+pipewire-pulse
+wireplumber
+bluez
+bluez-utils
+sudo
+git
+nano
+python
+python-pip
+
+# Desktop
+hyprland
+swaybg
+alacritty
+greetd
+
+# Terminal tools
+zsh
+tmux
+curl
+openssh
+htop
+ripgrep
+fzf
+
+# Containers
+docker
+docker-compose
+
+# Kubernetes
+kubectl
+k9s
+helm
+
+# Networking
+bind
+iproute2
+openbsd-netcat
+mtr
+nmap
+tcpdump
+
+# Package building
+base-devel

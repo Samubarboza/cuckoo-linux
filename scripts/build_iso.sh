@@ -15,6 +15,12 @@ docker run --rm \
   --volume "${project_dir}:/project" \
   cuckoo-builder /project/scripts/build_packages.sh
 
+printf 'Building the offline repo...\n'
+docker run --rm \
+  --volume "${project_dir}:/project" \
+  --volume /etc/pacman.d/mirrorlist:/etc/pacman.d/mirrorlist:ro \
+  cuckoo-builder /project/scripts/build_offline_repo.sh
+
 printf 'Cleaning the previous build...\n'
 docker run --rm \
   --volume "${project_dir}:/project" \
