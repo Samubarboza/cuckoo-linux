@@ -3,22 +3,29 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Build the offline repo that travels inside the ISO, so the install needs no internet.
-# For now it only compiles yay. Downloading the packages and making the repo database
-# come later.
+# It compiles yay, downloads the package list with its dependencies, and makes the repo
+# database that pacman reads.
 
 set -euo pipefail
 
 project_dir="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")/..")"
 offline_repo_dir="${project_dir}/configs/cuckoo/airootfs/usr/local/share/cuckoo/offline-repo"
+package_list_file="${project_dir}/configs/cuckoo/offline-packages.txt"
+repo_database="${offline_repo_dir}/cuckoo-offline.db.tar.gz"
 yay_aur_url="https://aur.archlinux.org/yay.git"
 build_user="nobody"
 
-for required_command in makepkg git go; do
+for required_command in makepkg git go pacman repo-add; do
   if ! command -v "${required_command}" &>/dev/null; then
-    printf "ERROR: '%s' was not found. Install 'base-devel', 'git' and 'go'.\n" "${required_command}" >&2
+    printf "ERROR: '%s' was not found.\n" "${required_command}" >&2
     exit 1
   fi
 done
+
+if [[ ! -f "${package_list_file}" ]]; then
+  printf "ERROR: '%s' was not found.\n" "${package_list_file}" >&2
+  exit 1
+fi
 
 rm -rf -- "${offline_repo_dir}"
 install -d -m 0755 -- "${offline_repo_dir}"
@@ -44,12 +51,31 @@ build_yay() {
   install -m 0644 -- "${temporary_dir}"/yay/*.pkg.tar.zst "${offline_repo_dir}/"
 }
 
+# Download every package from the list with its dependencies, without installing them.
+# A temporary database keeps the download apart from the builder own pacman state.
+download_packages() {
+  local temporary_db packages
+  temporary_db="$(mktemp -d)"
+  trap 'rm -rf -- "${temporary_db}"' RETURN
+
+  mapfile -t packages < <(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "${package_list_file}")
+
+  pacman -Syw --dbpath "${temporary_db}" --cachedir "${offline_repo_dir}" \
+    --noconfirm -- "${packages[@]}"
+}
+
 printf 'Compiling yay...\n'
 build_yay
+
+printf 'Downloading the packages...\n'
+download_packages
+
+printf 'Making the repo database...\n'
+repo-add -- "${repo_database}" "${offline_repo_dir}"/*.pkg.tar.zst
 
 # Inside Docker this runs as root, so hand the repo back to the project owner
 if ((EUID == 0)); then
   chown -R --reference="${project_dir}" -- "${offline_repo_dir}"
 fi
 
-printf 'Done! yay is in %s\n' "${offline_repo_dir}"
+printf 'Done! The offline repo is in %s\n' "${offline_repo_dir}"
