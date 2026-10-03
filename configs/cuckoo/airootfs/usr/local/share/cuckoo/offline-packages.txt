@@ -6,6 +6,7 @@ base
 linux
 linux-firmware
 mkinitcpio
+zram-generator
 grub
 efibootmgr
 intel-ucode

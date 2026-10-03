@@ -45,7 +45,8 @@ wifi_networks() {
     | grep -vE '^(Available networks|-+|Network name.*|$)'
 }
 
-# The install needs internet. Ask for Wi-Fi only when there is none.
+# The install works offline, so Wi-Fi is optional. Offer to connect, but always
+# let the person continue without internet.
 ask_wifi() {
   local device networks network password try=0
   has_internet && return 0
@@ -53,9 +54,9 @@ ask_wifi() {
   device="$(wifi_device)" || device=''
   if [[ -z "${device}" ]]; then
     show_title
-    gum style --foreground 1 'There is no internet and no Wi-Fi card was found.'
-    gum style 'Plug a network cable and start again.'
-    cancel_install
+    gum style 'No Wi-Fi card was found.'
+    gum confirm 'Continue without internet?' --affirmative 'Continue' --negative 'Cancel' || cancel_install
+    return 0
   fi
 
   while true; do
@@ -67,12 +68,14 @@ ask_wifi() {
 
     show_title
     if ((${#networks[@]} == 0)); then
-      gum style --foreground 1 'No Wi-Fi network was found.'
-      gum confirm 'Try again?' --affirmative 'Search again' --negative 'Cancel' || cancel_install
+      gum confirm 'No Wi-Fi network was found. Search again?' \
+        --affirmative 'Search again' --negative 'Continue without internet' || return 0
       continue
     fi
 
-    network="$(printf '%s\n' "${networks[@]}" | gum choose --header 'Wi-Fi network')" || cancel_install
+    network="$(printf '%s\n' "${networks[@]}" 'Continue without internet' \
+      | gum choose --header 'Wi-Fi network')" || cancel_install
+    [[ "${network}" == 'Continue without internet' ]] && return 0
     password="$(gum input --password --placeholder 'Wi-Fi password')" || cancel_install
 
     show_title
@@ -86,8 +89,8 @@ ask_wifi() {
     done
 
     show_title
-    gum style --foreground 1 'Could not connect to that network.'
-    gum confirm 'Try again?' --affirmative 'Try again' --negative 'Cancel' || cancel_install
+    gum confirm 'Could not connect to that network. Try again?' \
+      --affirmative 'Try again' --negative 'Continue without internet' || return 0
   done
 }
 
