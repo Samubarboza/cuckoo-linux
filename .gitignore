@@ -18,5 +18,5 @@ man/version.rst
 !configs/cuckoo/secureboot/MOK.cer
 grub-build/
 configs/cuckoo/airootfs/usr/local/share/cuckoo/packages/
-configs/cuckoo/airootfs/usr/local/share/cuckoo/offline-repo/
+configs/cuckoo/isofs/offline-repo/
 vm/

@@ -345,6 +345,15 @@ _make_custom_airootfs() {
     fi
 }
 
+# Copy extra files that must live on the ISO 9660, outside the squashfs image
+_make_custom_isofs() {
+    if [[ -d "${profile}/isofs" ]]; then
+        _msg_info "Copying custom isofs files..."
+        _unshare cp -af --no-preserve=ownership,mode -- "${profile}/isofs/." "${isofs_dir}"
+        _msg_info "Done!"
+    fi
+}
+
 # Install desired packages to the root file system
 _make_packages() {
     local -a _pacstrap_options
@@ -1975,6 +1984,7 @@ _build_iso_base() {
     fi
     _run_once _cleanup_pacstrap_dir
     _run_once _prepare_airootfs_image
+    _run_once _make_custom_isofs
 }
 
 # Build the bootstrap buildmode

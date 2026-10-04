@@ -9,7 +9,7 @@
 set -euo pipefail
 
 project_dir="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")/..")"
-offline_repo_dir="${project_dir}/configs/cuckoo/airootfs/usr/local/share/cuckoo/offline-repo"
+offline_repo_dir="${project_dir}/configs/cuckoo/isofs/offline-repo"
 package_list_file="${project_dir}/configs/cuckoo/airootfs/usr/local/share/cuckoo/offline-packages.txt"
 repo_database="${offline_repo_dir}/cuckoo-offline.db.tar.gz"
 yay_aur_url="https://aur.archlinux.org/yay.git"
@@ -71,6 +71,10 @@ build_yay
 
 printf 'Downloading the packages...\n'
 download_packages
+
+# The repo uses SigLevel Optional TrustAll, so the signatures are never checked.
+# Drop them to halve the file count and make the ISO smaller.
+rm -f -- "${offline_repo_dir}"/*.pkg.tar.zst.sig
 
 printf 'Making the repo database...\n'
 repo-add -- "${repo_database}" "${offline_repo_dir}"/*.pkg.tar.zst

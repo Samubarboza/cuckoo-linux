@@ -31,6 +31,31 @@ swaybg
 alacritty
 greetd
 
+# Desktop dependencies (needed by the cuckoo-desktop, cuckoo-greeter and quickshell packages)
+plymouth
+swaync
+upower
+brightnessctl
+qt6-svg
+adwaita-icon-theme
+hicolor-icon-theme
+ttf-jetbrains-mono-nerd
+adwaita-fonts
+noto-fonts-emoji
+cage
+gtk4
+accountsservice
+glib2
+pango
+cairo
+gdk-pixbuf2
+librsvg
+qt6-base
+qt6-declarative
+qt6-wayland
+wayland
+libdrm
+
 # Terminal tools
 zsh
 tmux
