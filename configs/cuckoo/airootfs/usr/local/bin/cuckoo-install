@@ -20,7 +20,7 @@ logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=8
+total_steps=9
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
@@ -398,18 +398,19 @@ if ! run_step --may-fail 'Setting up the updates' configure_target_repos; then
   update_warning='yes'
 fi
 
-# Turn off the blinking console cursor so it does not show in the black moment
-# between the login and the desktop. It does not hide the boot messages.
-# grub-mkconfig writes a temp file and only replaces grub.cfg on success, so a
-# failure never breaks booting.
+# Hide the console cursor and the boot messages and turn on the Plymouth splash,
+# for a clean boot into the login. grub-mkconfig writes a temp file and only
+# replaces grub.cfg on success, so a failure never breaks booting.
 configure_boot_cmdline() {
   local grub_defaults="${target_dir}/etc/default/grub"
-  local cursor_option="vt.global_cursor_default=0"
+  local options=(vt.global_cursor_default=0 quiet splash)
+  local option
   [[ -f "${grub_defaults}" ]] || return 1
-  # Add the option only if it is missing, so running the installer twice is safe
-  if ! grep -qF -- "${cursor_option}" "${grub_defaults}"; then
-    sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 ${cursor_option}\"/" "${grub_defaults}" || return 1
-  fi
+  # Add each option only if it is missing, so running the installer twice is safe
+  for option in "${options[@]}"; do
+    grep -qF -- "${option}" "${grub_defaults}" && continue
+    sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 ${option}\"/" "${grub_defaults}" || return 1
+  done
   arch-chroot "${target_dir}" grub-mkconfig -o /boot/grub/grub.cfg
 }
 
@@ -436,6 +437,29 @@ install_desktop_package() {
 desktop_warning=''
 if ! run_step --may-fail 'Installing the desktop' install_desktop_package; then
   desktop_warning='yes'
+fi
+
+# The splash is cosmetic: plymouth shows the Cuckoo theme while the system boots.
+# A failure only means no splash, so it never stops the boot. The theme ships in
+# the cuckoo-desktop package, which also pulls in plymouth.
+configure_splash() {
+  local mkinitcpio_conf="${target_dir}/etc/mkinitcpio.conf"
+  [[ -f "${mkinitcpio_conf}" ]] || return 1
+  # Only touch the initramfs if plymouth is really installed, so a failed desktop
+  # step can never leave a broken initramfs and an unbootable system
+  [[ -f "${target_dir}/usr/lib/initcpio/install/plymouth" ]] || return 1
+  # Add the plymouth hook right after udev, only if missing (safe to run twice)
+  if ! grep -q 'plymouth' "${mkinitcpio_conf}"; then
+    sed -i '/^HOOKS=/ s/\budev\b/udev plymouth/' "${mkinitcpio_conf}" || return 1
+  fi
+  install -d -m 0755 -- "${target_dir}/etc/plymouth" || return 1
+  printf '[Daemon]\nTheme=cuckoo\n' >"${target_dir}/etc/plymouth/plymouthd.conf" || return 1
+  arch-chroot "${target_dir}" mkinitcpio -P
+}
+
+splash_warning=''
+if ! run_step --may-fail 'Setting up the splash' configure_splash; then
+  splash_warning='yes'
 fi
 
 install_hardware_drivers() {
@@ -476,6 +500,10 @@ if [[ -n "${boot_warning}" ]]; then
 fi
 if [[ -n "${update_warning}" ]]; then
   print_centered_line 'The update settings were not fully set.' "${color_text}"
+  printf '\n'
+fi
+if [[ -n "${splash_warning}" ]]; then
+  print_centered_line 'The boot splash was not set up.' "${color_text}"
   printf '\n'
 fi
 

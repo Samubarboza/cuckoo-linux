@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Cuckoo
+Description=Cuckoo Linux boot splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/cuckoo
+ScriptFile=/usr/share/plymouth/themes/cuckoo/cuckoo.script

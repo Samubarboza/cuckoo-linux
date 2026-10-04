@@ -32,6 +32,7 @@ alacritty
 greetd
 
 # Desktop dependencies (needed by the cuckoo-desktop, cuckoo-greeter and quickshell packages)
+plymouth
 swaync
 upower
 brightnessctl
