@@ -37,6 +37,7 @@ gptfdisk
 grml-zsh-config
 grub
 gum
+haveged
 hdparm
 hyperv
 intel-ucode
