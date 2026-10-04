@@ -362,9 +362,10 @@ run_step 'Formatting the disk' format_disk
 run_step 'Mounting the disk' mount_disk
 write_archinstall_files
 packages_total="$(count_target_packages)"
-# setsid leaves archinstall without a terminal, so it writes in the log and not on our screen
+# setsid leaves archinstall without a terminal, so it writes in the log and not on our screen.
+# skip-ntp and skip-wkd avoid two waits that need internet, so an offline install never hangs.
 run_step --progress base_system_percent 'Installing the base system' \
-  setsid --wait archinstall --silent --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
+  setsid --wait archinstall --silent --skip-ntp --skip-wkd --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
 
 # The console login shows the normal logo; the installer screen uses the big one
 if [[ -f "${logo_file}" ]]; then
