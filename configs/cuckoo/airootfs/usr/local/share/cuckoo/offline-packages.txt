@@ -43,6 +43,9 @@ hicolor-icon-theme
 ttf-jetbrains-mono-nerd
 adwaita-fonts
 noto-fonts-emoji
+starship
+atuin
+bash-preexec
 cage
 gtk4
 accountsservice
@@ -51,6 +54,9 @@ pango
 cairo
 gdk-pixbuf2
 librsvg
+
+zed
+vulkan-swrast
 
 # Terminal tools
 zsh

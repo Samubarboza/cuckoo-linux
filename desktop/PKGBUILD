@@ -1,8 +1,8 @@
 # Maintainer: Samubarboza <samubjunior95@gmail.com>
 
 pkgname=cuckoo-desktop
-pkgver=1.2.1
-pkgrel=2
+pkgver=1.3.0
+pkgrel=1
 pkgdesc="Desktop settings for Cuckoo Linux"
 arch=('any')
 url="https://github.com/Samubarboza/cuckoo-linux"
@@ -15,7 +15,8 @@ depends=('quickshell' 'swaync'                       # the bar with its popups, 
          'adwaita-icon-theme' 'hicolor-icon-theme'   # icons for the open apps
          'ttf-jetbrains-mono-nerd' 'adwaita-fonts'   # the bar lines up with these fonts
          'noto-fonts-emoji'                          # the weather icon is an emoji
-         'plymouth')                                 # the boot splash
+         'plymouth'                                  # the boot splash
+         'starship' 'atuin' 'bash-preexec')          # the bash prompt and history
 
 # config goes to /etc/skel, the folder every new user starts with.
 # system goes to the root of the disk.
