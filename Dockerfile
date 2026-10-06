@@ -5,14 +5,12 @@
 FROM archlinux:latest
 
 # First line builds the iso, second line builds our GRUB, third line compiles the login
-# screen, fourth line compiles yay from the AUR, fifth line compiles the quickshell bar,
-# sixth line tests the iso in QEMU
+# screen, fourth line compiles yay from the AUR, fifth line tests the iso in QEMU
 RUN pacman -Syu --noconfirm --needed \
         arch-install-scripts libisoburn squashfs-tools erofs-utils dosfstools e2fsprogs mtools sbsigntools openssl \
         base-devel python \
         rust gtk4 \
         go git \
-        cmake ninja qt6-base qt6-declarative qt6-wayland qt6-shadertools spirv-tools wayland-protocols cli11 libdrm pipewire \
         qemu-system-x86 qemu-ui-gtk edk2-ovmf virt-firmware \
     && pacman -Scc --noconfirm
 
