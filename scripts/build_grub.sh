@@ -8,7 +8,7 @@
 set -e -u
 
 grub_version="2.14"
-grub_download_url="https://ftp.gnu.org/gnu/grub/grub-${grub_version}.tar.xz"
+grub_download_url="https://mirrors.kernel.org/gnu/grub/grub-${grub_version}.tar.xz"
 grub_download_sha256="bc8d3c73535b8838d8c8e2654d73edc4e6ae8c8acdb45d5df5dc9a1547446d43"
 
 project_dir="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")/..")"
