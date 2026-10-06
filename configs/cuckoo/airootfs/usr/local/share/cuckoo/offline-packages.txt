@@ -55,6 +55,9 @@ cairo
 gdk-pixbuf2
 librsvg
 
+zed
+vulkan-swrast
+
 # Terminal tools
 zsh
 tmux
