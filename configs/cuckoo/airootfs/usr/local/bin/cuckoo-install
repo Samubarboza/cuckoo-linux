@@ -313,7 +313,7 @@ write_archinstall_files() {
   "ntp": true,
   "packages": ${packages_json},
   "profile_config": null,
-  "services": ["bluetooth", "docker"],
+  "services": ["bluetooth", "docker", "power-profiles-daemon"],
   "swap": { "enabled": true, "algorithm": "zstd" },
   "timezone": "${timezone}"
 }

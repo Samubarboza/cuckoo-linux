@@ -29,7 +29,7 @@ Our packages:
 
 Programs:
 
-- **Base:** linux, linux-firmware, grub, efibootmgr, btrfs-progs, zram-generator, networkmanager, pipewire, bluez, sudo, git, nano, python
+- **Base:** linux, linux-firmware, grub, efibootmgr, btrfs-progs, zram-generator, networkmanager, pipewire, bluez, power-profiles-daemon, sudo, git, nano, python
 - **Desktop:** hyprland, quickshell, swaybg, alacritty, greetd, plymouth, swaync
 - **Editor:** zed
 - **Terminal:** starship, atuin, zsh, tmux, curl, openssh, htop, ripgrep, fzf

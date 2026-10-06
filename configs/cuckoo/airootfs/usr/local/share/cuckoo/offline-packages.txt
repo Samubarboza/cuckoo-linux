@@ -19,6 +19,7 @@ pipewire-pulse
 wireplumber
 bluez
 bluez-utils
+power-profiles-daemon
 sudo
 git
 nano
