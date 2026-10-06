@@ -9,7 +9,7 @@ pkgrel=1
 pkgdesc="Bar and popups for Cuckoo Linux"
 arch=('x86_64')
 url="https://github.com/quickshell-mirror/quickshell"
-license=('GPL-3.0-or-later')
+license=('LGPL-3.0-only')
 # tray needs status-notifier, music needs mpris, volume needs pipewire
 depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'wayland' 'libdrm' 'pipewire')
 makedepends=('cmake' 'ninja' 'pkgconf' 'qt6-shadertools' 'spirv-tools'
