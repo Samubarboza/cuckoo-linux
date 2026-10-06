@@ -22,9 +22,38 @@
       "Bash(pacman:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(git restore:*)",
+      "Bash(rm -rf:*)",
+      "Bash(rm -fr:*)",
       "Bash(./scripts/reset_disk.sh:*)",
       "Bash(./scripts/install_vm.sh:*)",
       "Bash(./scripts/boot_vm_no_secureboot.sh:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block_keys_access.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_edited_script.sh"
+          }
+        ]
+      }
     ]
   }
 }

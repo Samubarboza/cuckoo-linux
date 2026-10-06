@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Check the format and the shell scripts before every commit.
+# Check the format, the shell scripts and the secrets before every commit.
 # Turn it on once with: git config core.hooksPath .githooks
 
 set -euo pipefail
@@ -14,3 +14,6 @@ shfmt -d .
 
 printf 'Checking the shell scripts...\n'
 shfmt -f . | xargs -r shellcheck
+
+printf 'Checking for secrets...\n'
+gitleaks git --pre-commit --staged --redact --no-banner

@@ -12,8 +12,8 @@ Cuckoo Linux is a system based on Arch Linux. It has three parts:
 
 - `archiso/` — tool that builds the ISO
 - `configs/cuckoo/` — ISO profile
-- `desktop/` — desktop package (Hyprland, Waybar, theme)
-- `eww/` — eww package (bar popups)
+- `desktop/` — desktop package (Hyprland, the bar, theme)
+- `quickshell/` — Quickshell package (the program for the bar and its popups)
 - `greeter/` — login screen package
 - `scripts/` — tools to build and test
 - `local/` — work notes, not in the repository
@@ -39,6 +39,10 @@ Each folder has one job only.
 - No overengineering: solve the problem of today.
 - Clear names for variables, functions and files.
 - The same format in all the repository.
+
+## Language
+
+This project is an exception: code, messages, logs and errors are in simple English.
 
 ## Bash style
 
