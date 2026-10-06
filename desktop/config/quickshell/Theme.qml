@@ -35,4 +35,12 @@ Singleton {
   readonly property color cardFade1: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.86)
   readonly property color cardFade2: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.95)
   readonly property color cardFade3: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.98)
+
+  // App launcher: dark glass card with a soft border
+  readonly property int launcherRadius: 18
+  readonly property int launcherFieldRadius: 12
+  readonly property int launcherCellRadius: 14
+  readonly property color launcherBackground: Qt.rgba(29 / 255, 31 / 255, 33 / 255, 0.53)
+  readonly property color launcherField: Qt.rgba(42 / 255, 45 / 255, 49 / 255, 0.60)
+  readonly property color launcherBorder: Qt.rgba(1, 1, 1, 0.13)
 }

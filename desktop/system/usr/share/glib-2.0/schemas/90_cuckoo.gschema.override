@@ -1,0 +1,3 @@
+# Cuckoo default for every user. Each user can still change it with gsettings.
+[org.gnome.desktop.interface]
+icon-theme='Papirus-Dark'
