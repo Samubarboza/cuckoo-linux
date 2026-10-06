@@ -39,8 +39,9 @@ swaync
 upower
 brightnessctl
 qt6-svg
-adwaita-icon-theme
+papirus-icon-theme
 hicolor-icon-theme
+gsettings-desktop-schemas
 ttf-jetbrains-mono-nerd
 adwaita-fonts
 noto-fonts-emoji

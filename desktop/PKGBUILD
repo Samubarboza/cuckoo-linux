@@ -13,7 +13,8 @@ depends=('quickshell' 'swaync'                       # the bar with its popups, 
          'power-profiles-daemon'                     # the power modes in the battery popup
          'brightnessctl'                             # the brightness slider
          'qt6-svg'                                   # draws the svg app icons
-         'adwaita-icon-theme' 'hicolor-icon-theme'   # icons for the open apps
+         'papirus-icon-theme' 'hicolor-icon-theme'   # the only icon theme, and its base
+         'gsettings-desktop-schemas'                 # makes papirus the icon theme of the gtk apps
          'ttf-jetbrains-mono-nerd' 'adwaita-fonts'   # the bar lines up with these fonts
          'noto-fonts-emoji'                          # the weather icon is an emoji
          'plymouth'                                  # the boot splash

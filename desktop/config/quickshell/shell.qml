@@ -1,4 +1,4 @@
-//@ pragma IconTheme Adwaita
+//@ pragma IconTheme Papirus-Dark
 import Quickshell
 import QtQuick
 
