@@ -84,3 +84,6 @@ tcpdump
 
 # Package building
 base-devel
+
+# AUR helper (compiled by the build, not downloaded)
+yay

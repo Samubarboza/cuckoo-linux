@@ -58,7 +58,8 @@ download_packages() {
   temporary_db="$(mktemp -d)"
   trap 'rm -rf -- "${temporary_db}"' RETURN
 
-  mapfile -t packages < <(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "${package_list_file}")
+  # yay is not in the Arch repos, build_yay already puts it in the repo
+  mapfile -t packages < <(grep -vE '^[[:space:]]*#|^[[:space:]]*$|^yay$' "${package_list_file}")
 
   # --disable-sandbox so pacman can write to our own dbpath and cachedir inside
   # the builder. The download is controlled here, not from an untrusted place.
