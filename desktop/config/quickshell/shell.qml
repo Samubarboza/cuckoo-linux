@@ -3,6 +3,9 @@ import Quickshell
 import QtQuick
 
 ShellRoot {
+  // One launcher for all screens, it opens on the screen with the focus
+  Launcher {}
+
   Variants {
     model: Quickshell.screens
     PanelWindow {

@@ -27,6 +27,13 @@ PanelWindow {
   WlrLayershell.namespace: "cuckoo-launcher"
   WlrLayershell.keyboardFocus: shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
+  // Hyprland sends super+D here (quickshell:launcher in hyprland.conf)
+  GlobalShortcut {
+    name: "launcher"
+    description: "Open or close the app launcher"
+    onPressed: root.toggle()
+  }
+
   // Clicking outside the card closes it
   HyprlandFocusGrab {
     windows: [root]
