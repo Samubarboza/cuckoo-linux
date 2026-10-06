@@ -13,7 +13,6 @@ Cuckoo Linux is a system based on Arch Linux. It has three parts:
 - `archiso/` — tool that builds the ISO
 - `configs/cuckoo/` — ISO profile
 - `desktop/` — desktop package (Hyprland, the bar, theme)
-- `quickshell/` — Quickshell package (the program for the bar and its popups)
 - `greeter/` — login screen package
 - `scripts/` — tools to build and test
 - `local/` — work notes, not in the repository

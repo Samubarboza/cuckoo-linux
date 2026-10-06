@@ -30,8 +30,9 @@ hyprland
 swaybg
 alacritty
 greetd
+quickshell
 
-# Desktop dependencies (needed by the cuckoo-desktop, cuckoo-greeter and quickshell packages)
+# Desktop dependencies (needed by the cuckoo-desktop and cuckoo-greeter packages)
 plymouth
 swaync
 upower
@@ -50,11 +51,6 @@ pango
 cairo
 gdk-pixbuf2
 librsvg
-qt6-base
-qt6-declarative
-qt6-wayland
-wayland
-libdrm
 
 # Terminal tools
 zsh
