@@ -91,7 +91,7 @@ The scripts need two files in ``vm/``: ``OVMF_VARS.fd`` and ``OVMF_VARS_sin_secu
 Check the code
 ==============
 
-You need ``shfmt`` 3.13.1 and ``shellcheck`` 0.11.0.
+You need ``shfmt`` 3.13.1, ``shellcheck`` 0.11.0 and ``gitleaks`` 8.30.1.
 
 .. code:: sh
 

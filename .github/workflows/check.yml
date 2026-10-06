@@ -15,6 +15,8 @@ defaults:
 env:
   SHFMT_VERSION: 3.13.1
   SHELLCHECK_VERSION: 0.11.0
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
 
 jobs:
   check:
@@ -31,8 +33,22 @@ jobs:
           curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" \
             | tar -xJ --strip-components=1 -C /usr/local/bin "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
 
+      - name: Install gitleaks
+        run: |
+          curl -fsSL -o /tmp/gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          printf '%s  /tmp/gitleaks.tar.gz\n' "${GITLEAKS_SHA256}" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+
       - name: Get the code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # gitleaks checks the whole history
+
+      # The container runs as root, so git needs to trust the folder
+      - name: Check for secrets
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          gitleaks git --redact --no-banner .
 
       - name: Check the format
         run: shfmt -d .
