@@ -36,6 +36,7 @@ for pci_device in "${pci_devices_dir}"/*; do
       found_video_card=1
       found_nvidia_card=1
       ;;
+    *) ;;
   esac
 done
 

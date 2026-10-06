@@ -9,3 +9,15 @@ enable=quote-safe-variables
 
 # Require [[ and warn about [ in Bash/Ksh
 enable=require-double-brackets
+
+# Suggest a default *) case in every case
+enable=add-default-case
+
+# Suggest [[ a != b ]] instead of [[ ! a == b ]]
+enable=avoid-negated-conditions
+
+# Suggest 'file' instead of 'cat file |'
+enable=useless-use-of-cat
+
+# Require ${var} instead of $var
+enable=require-variable-braces

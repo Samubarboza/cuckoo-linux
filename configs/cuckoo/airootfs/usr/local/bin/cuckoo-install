@@ -215,6 +215,9 @@ run_step() {
         progress_command="$2"
         shift 2
         ;;
+      *)
+        fail "Unknown run_step option: $1"
+        ;;
     esac
   done
   local title="$1" start_time="${SECONDS}" last_line step_percent step_pid

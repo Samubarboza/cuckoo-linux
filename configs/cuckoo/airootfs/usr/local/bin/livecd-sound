@@ -136,14 +136,14 @@ sanify_levels() {
   case "$1" in
     all)
       for card in $(echo_card_indices); do
-        sanify_levels_on_card "$card" || ttsdml_returnstatus=1
+        sanify_levels_on_card "${card}" || ttsdml_returnstatus=1
       done
       ;;
     *)
       sanify_levels_on_card "$1" || ttsdml_returnstatus=1
       ;;
   esac
-  return "$ttsdml_returnstatus"
+  return "${ttsdml_returnstatus}"
 }
 
 # List all cards that *should* be usable for PCM audio.  In my experience,
@@ -152,8 +152,8 @@ sanify_levels() {
 list_non_pcsp_cards() {
   for card in $(echo_card_indices); do
     local cardfile="/proc/asound/card${card}/id"
-    if [[ -r "$cardfile" && -f "$cardfile" && "$(cat "$cardfile")" != pcsp ]]; then
-      echo "$card"
+    if [[ -r "${cardfile}" && -f "${cardfile}" && "$(cat "${cardfile}")" != pcsp ]]; then
+      echo "${card}"
     fi
   done
 }
@@ -165,18 +165,18 @@ unmute_all_cards() {
 
 is_numeric() {
   local str="$1"
-  [[ "$str" =~ ^[0-9]+$ ]]
+  [[ "${str}" =~ ^[0-9]+$ ]]
 }
 
 set_default_card() {
   local card="$1"
-  sed -e "s/%card%/$card/g" </usr/local/share/livecd-sound/asound.conf.in \
+  sed -e "s/%card%/${card}/g" </usr/local/share/livecd-sound/asound.conf.in \
     >/etc/asound.conf
 }
 
 play_on_card() {
   local card="$1" file="$2"
-  aplay -q "-Dplughw:$card,0" "$file"
+  aplay -q "-Dplughw:${card},0" "${file}"
 }
 
 # If there are multiple usable sound cards, prompt the user to choose one,
@@ -192,21 +192,21 @@ pick_a_card() {
   fi
   systemd-cat -t "livecdsound" printf "multiple sound cards detected\n"
   for card in "${usable_cards[@]}"; do
-    if ! is_numeric "$card"; then
+    if ! is_numeric "${card}"; then
       continue
     fi
-    play_on_card "$card" /usr/share/livecd-sounds/pick-a-card.wav &
+    play_on_card "${card}" /usr/share/livecd-sounds/pick-a-card.wav &
   done
   wait
   sleep 1
   for card in "${usable_cards[@]}"; do
-    if ! is_numeric "$card"; then
+    if ! is_numeric "${card}"; then
       continue
     fi
-    play_on_card "$card" /usr/share/livecd-sounds/beep.wav
+    play_on_card "${card}" /usr/share/livecd-sounds/beep.wav
     if read -r -t 10; then
-      systemd-cat -t "livecdsound" printf "Selecting %s sound card as default\n" "$card"
-      set_default_card "$card"
+      systemd-cat -t "livecdsound" printf "Selecting %s sound card as default\n" "${card}"
+      set_default_card "${card}"
       break
     fi
   done

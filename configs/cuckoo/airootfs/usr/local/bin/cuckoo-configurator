@@ -154,6 +154,7 @@ show_disk_content() {
       ntfs) [[ "${systems}" == *Windows* ]] || systems+='Windows ' ;;
       ext4 | btrfs | xfs) [[ "${systems}" == *Linux* ]] || systems+='Linux ' ;;
       apfs | hfsplus) [[ "${systems}" == *macOS* ]] || systems+='macOS ' ;;
+      *) ;;
     esac
   done < <(lsblk --list --noheadings --output PATH,SIZE -- "$1" | tail -n +2)
 
