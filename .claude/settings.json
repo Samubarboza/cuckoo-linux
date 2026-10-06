@@ -22,6 +22,11 @@
       "Bash(pacman:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(git restore:*)",
+      "Bash(rm -rf:*)",
+      "Bash(rm -fr:*)",
       "Bash(./scripts/reset_disk.sh:*)",
       "Bash(./scripts/install_vm.sh:*)",
       "Bash(./scripts/boot_vm_no_secureboot.sh:*)"
