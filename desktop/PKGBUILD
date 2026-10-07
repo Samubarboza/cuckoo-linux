@@ -7,7 +7,6 @@ pkgdesc="Desktop settings for Cuckoo Linux"
 arch=('any')
 url="https://github.com/Samubarboza/cuckoo-linux"
 license=('GPL-3.0-or-later')
-# What the Quickshell bar in config/quickshell uses
 depends=('quickshell' 'swaync'                       # the bar with its popups, and the notifications
          'hyprlock' 'hypridle'                       # the lock screen, and the idle timer that starts it
          'upower'                                    # battery level
