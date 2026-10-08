@@ -36,6 +36,8 @@ quickshell
 # Desktop dependencies (needed by the cuckoo-desktop and cuckoo-greeter packages)
 plymouth
 swaync
+hyprlock
+hypridle
 upower
 brightnessctl
 qt6-svg
