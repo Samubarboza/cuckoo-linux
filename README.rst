@@ -17,7 +17,7 @@ Cuckoo Linux is a Linux system based on Arch Linux.
 - Its own installer, in the terminal.
 - A desktop that is ready from the first boot.
 
-**This project is in development.** It is not ready for daily use.
+**This project is in development.**
 
 Packages
 ========
