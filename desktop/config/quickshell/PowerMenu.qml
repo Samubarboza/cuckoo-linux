@@ -62,6 +62,8 @@ PanelWindow {
     Keys.onEscapePressed: root.close()
     Keys.onUpPressed: root.selectedIndex = (root.selectedIndex + root.powerActions.length - 1) % root.powerActions.length
     Keys.onDownPressed: root.selectedIndex = (root.selectedIndex + 1) % root.powerActions.length
+    Keys.onReturnPressed: root.runAction(root.selectedIndex)
+    Keys.onEnterPressed: root.runAction(root.selectedIndex)
 
     Behavior on opacity {
       NumberAnimation { id: fade; duration: 220; easing.type: Easing.OutCubic }
@@ -180,6 +182,7 @@ PanelWindow {
           }
 
           HoverHandler { onHoveredChanged: if (hovered) root.selectedIndex = index }
+          TapHandler { onTapped: root.runAction(index) }
         }
       }
     }
@@ -195,6 +198,11 @@ PanelWindow {
   }
   function close() {
     shown = false;
+  }
+  // Close first, so the menu is not on screen when the action runs
+  function runAction(actionIndex) {
+    close();
+    Quickshell.execDetached(powerActions[actionIndex].command);
   }
   function toggle() {
     if (shown) close();
