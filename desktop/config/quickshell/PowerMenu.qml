@@ -23,6 +23,8 @@ PanelWindow {
     { id: "shutdown", command: ["systemctl", "poweroff"], iconBackground: Theme.powerRedSoft, danger: true }
   ]
   property bool shown: false
+  // The mouse and the arrows move the same selection
+  property int selectedIndex: 0
 
   implicitWidth: menuWidth
   implicitHeight: content.implicitHeight + 2 * (cardMargin + cardPadding)
@@ -58,6 +60,8 @@ PanelWindow {
     opacity: root.shown ? 1 : 0
     focus: true
     Keys.onEscapePressed: root.close()
+    Keys.onUpPressed: root.selectedIndex = (root.selectedIndex + root.powerActions.length - 1) % root.powerActions.length
+    Keys.onDownPressed: root.selectedIndex = (root.selectedIndex + 1) % root.powerActions.length
 
     Behavior on opacity {
       NumberAnimation { id: fade; duration: 220; easing.type: Easing.OutCubic }
@@ -134,9 +138,10 @@ PanelWindow {
         model: root.powerActions
         delegate: Item {
           required property var modelData
-          // Shut down stays red, the others turn lilac on hover
+          required property int index
+          // Shut down stays red, the others turn lilac when selected
           readonly property bool danger: modelData.danger === true
-          readonly property bool highlighted: hover.hovered
+          readonly property bool highlighted: index === root.selectedIndex
           width: parent.width
           implicitHeight: 70
 
@@ -174,7 +179,7 @@ PanelWindow {
             }
           }
 
-          HoverHandler { id: hover }
+          HoverHandler { onHoveredChanged: if (hovered) root.selectedIndex = index }
         }
       }
     }
@@ -184,6 +189,7 @@ PanelWindow {
   function open() {
     var focusedName = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
     screen = Quickshell.screens.find(s => s.name === focusedName) || Quickshell.screens[0];
+    selectedIndex = 0;
     shown = true;
     card.forceActiveFocus();
   }
