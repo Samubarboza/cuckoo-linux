@@ -107,5 +107,6 @@ License
 Cuckoo Linux is a modified copy of `archiso <https://gitlab.archlinux.org/archlinux/archiso>`_.
 It uses GPL-3.0-or-later. See ``LICENSE``.
 ``shimx64.efi`` and ``mmx64.efi`` come from Fedora, without changes. They use a BSD license.
+The power menu icons come from `Lucide <https://lucide.dev>`_ (ISC license) and `Feather <https://feathericons.com>`_ (MIT license).
 
 Cuckoo Linux is not an official Arch Linux or Fedora project.
