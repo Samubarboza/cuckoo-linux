@@ -16,11 +16,11 @@ PanelWindow {
   readonly property string userName: Quickshell.env("USER")
   // The id names the text in Language.qml and the icon in /usr/share/cuckoo/icons
   readonly property var powerActions: [
-    { id: "suspend", command: ["systemctl", "suspend"] },
-    { id: "lock", command: ["loginctl", "lock-session"] },
-    { id: "logout", command: ["hyprctl", "dispatch", "exit"] },
-    { id: "reboot", command: ["systemctl", "reboot"] },
-    { id: "shutdown", command: ["systemctl", "poweroff"] }
+    { id: "suspend", command: ["systemctl", "suspend"], iconBackground: Theme.powerAccentSoft },
+    { id: "lock", command: ["loginctl", "lock-session"], iconBackground: Theme.powerAccentSoft },
+    { id: "logout", command: ["hyprctl", "dispatch", "exit"], iconBackground: Theme.powerAccentSoft },
+    { id: "reboot", command: ["systemctl", "reboot"], iconBackground: Theme.powerIconNeutral },
+    { id: "shutdown", command: ["systemctl", "poweroff"], iconBackground: Theme.powerRedSoft, danger: true }
   ]
   property bool shown: false
 
@@ -134,13 +134,47 @@ PanelWindow {
         model: root.powerActions
         delegate: Item {
           required property var modelData
+          // Shut down stays red, the others turn lilac on hover
+          readonly property bool danger: modelData.danger === true
+          readonly property bool highlighted: hover.hovered
           width: parent.width
-          implicitHeight: label.implicitHeight
-          Text {
-            id: label
-            text: Language.text(modelData.id)
-            color: Theme.powerMenuLabel; font.family: Theme.fontFamily
+          implicitHeight: 70
+
+          Rectangle {
+            anchors.fill: parent
+            anchors.topMargin: 3; anchors.bottomMargin: 3
+            radius: Theme.powerButtonRadius
+            color: !highlighted ? "transparent" : danger ? Theme.powerRedHover : Theme.powerMenuHover
+            border.width: 1
+            border.color: !highlighted ? "transparent" : danger ? Theme.powerRedBorder : Theme.powerAccentBorder
+
+            Row {
+              anchors.fill: parent
+              anchors.leftMargin: 14; anchors.rightMargin: 14
+              spacing: 14
+
+              Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 42; height: 42
+                radius: Theme.powerIconRadius
+                color: modelData.iconBackground
+                Image {
+                  anchors.centerIn: parent
+                  source: "file:///usr/share/cuckoo/icons/" + modelData.id + ".svg"
+                  sourceSize.width: 24; sourceSize.height: 24
+                }
+              }
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: Language.text(modelData.id)
+                color: danger ? Theme.powerRed : highlighted ? Theme.powerAccent : Theme.powerMenuLabel
+                font.family: Theme.fontFamily; font.pixelSize: 15
+                font.weight: danger || highlighted ? Font.DemiBold : Font.Medium
+              }
+            }
           }
+
+          HoverHandler { id: hover }
         }
       }
     }
