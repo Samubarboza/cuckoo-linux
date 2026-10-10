@@ -7,10 +7,14 @@ import QtQuick
 PanelWindow {
   id: root
 
+  // 360 px window with a 20 px gap around the card
+  readonly property int menuWidth: 360
+  readonly property int cardMargin: 20
+  readonly property int cardPadding: 32
   property bool shown: false
 
-  implicitWidth: content.implicitWidth
-  implicitHeight: content.implicitHeight
+  implicitWidth: menuWidth
+  implicitHeight: content.implicitHeight + 2 * (cardMargin + cardPadding)
   color: "transparent"
   visible: shown || fade.running
   exclusionMode: ExclusionMode.Ignore
@@ -35,6 +39,7 @@ PanelWindow {
   Rectangle {
     id: card
     anchors.fill: parent
+    anchors.margins: root.cardMargin
     radius: Theme.powerMenuRadius
     color: Theme.powerMenuBackground
     border.width: 1
@@ -50,6 +55,7 @@ PanelWindow {
     Column {
       id: content
       anchors.fill: parent
+      anchors.margins: root.cardPadding
     }
   }
 
