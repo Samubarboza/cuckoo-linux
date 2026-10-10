@@ -18,6 +18,13 @@ PanelWindow {
   WlrLayershell.namespace: "cuckoo-power-menu"
   WlrLayershell.keyboardFocus: shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
+  // Hyprland sends super+X here (quickshell:power in hyprland.conf)
+  GlobalShortcut {
+    name: "power"
+    description: "Open or close the power menu"
+    onPressed: root.toggle()
+  }
+
   // Clicking outside the card closes it
   HyprlandFocusGrab {
     windows: [root]
