@@ -14,6 +14,14 @@ PanelWindow {
   readonly property int cardPadding: 32
   readonly property int avatarSize: 100
   readonly property string userName: Quickshell.env("USER")
+  // The id names the text in Language.qml and the icon in /usr/share/cuckoo/icons
+  readonly property var powerActions: [
+    { id: "suspend", command: ["systemctl", "suspend"] },
+    { id: "lock", command: ["loginctl", "lock-session"] },
+    { id: "logout", command: ["hyprctl", "dispatch", "exit"] },
+    { id: "reboot", command: ["systemctl", "reboot"] },
+    { id: "shutdown", command: ["systemctl", "poweroff"] }
+  ]
   property bool shown: false
 
   implicitWidth: menuWidth
@@ -118,6 +126,21 @@ PanelWindow {
           anchors.verticalCenter: parent.verticalCenter
           height: 1
           color: Theme.powerMenuLine
+        }
+      }
+
+      // One button for each action
+      Repeater {
+        model: root.powerActions
+        delegate: Item {
+          required property var modelData
+          width: parent.width
+          implicitHeight: label.implicitHeight
+          Text {
+            id: label
+            text: Language.text(modelData.id)
+            color: Theme.powerMenuLabel; font.family: Theme.fontFamily
+          }
         }
       }
     }
