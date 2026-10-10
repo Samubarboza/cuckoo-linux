@@ -43,4 +43,23 @@ Singleton {
   readonly property color launcherBackground: Qt.rgba(29 / 255, 31 / 255, 33 / 255, 0.53)
   readonly property color launcherField: Qt.rgba(42 / 255, 45 / 255, 49 / 255, 0.60)
   readonly property color launcherBorder: Qt.rgba(1, 1, 1, 0.13)
+
+  // Power menu: dark card, lilac on hover and red to shut down
+  readonly property int powerMenuRadius: 20
+  readonly property int powerButtonRadius: 15
+  readonly property int powerIconRadius: 10
+  readonly property color powerMenuBackground: Qt.rgba(22 / 255, 26 / 255, 31 / 255, 0.914)
+  readonly property color powerMenuLine: Qt.rgba(1, 1, 1, 0.07)
+  readonly property color powerMenuName: "#e8e8f0"
+  readonly property color powerMenuLabel: Qt.rgba(1, 1, 1, 0.75)
+  readonly property color powerMenuHover: Qt.rgba(218 / 255, 218 / 255, 218 / 255, 0.10)
+  readonly property color powerAccent: "#9d7dea"
+  readonly property color powerAccentSoft: Qt.rgba(157 / 255, 125 / 255, 234 / 255, 0.12)
+  readonly property color powerAccentBorder: Qt.rgba(157 / 255, 125 / 255, 234 / 255, 0.22)
+  readonly property color powerAvatarBorder: Qt.rgba(157 / 255, 125 / 255, 234 / 255, 0.30)
+  readonly property color powerRed: "#f87171"
+  readonly property color powerRedSoft: Qt.rgba(248 / 255, 113 / 255, 113 / 255, 0.12)
+  readonly property color powerRedHover: Qt.rgba(248 / 255, 113 / 255, 113 / 255, 0.08)
+  readonly property color powerRedBorder: Qt.rgba(248 / 255, 113 / 255, 113 / 255, 0.22)
+  readonly property color powerIconNeutral: Qt.rgba(1, 1, 1, 0.08)
 }

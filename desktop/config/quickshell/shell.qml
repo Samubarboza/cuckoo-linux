@@ -5,6 +5,8 @@ import QtQuick
 ShellRoot {
   // One launcher for all screens, it opens on the screen with the focus
   Launcher {}
+  // One power menu too, it opens on the screen with the focus
+  PowerMenu {}
 
   Variants {
     model: Quickshell.screens
