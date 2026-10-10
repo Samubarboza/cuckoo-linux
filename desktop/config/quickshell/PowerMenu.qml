@@ -107,6 +107,19 @@ PanelWindow {
           }
         }
       }
+
+      // Line between the header and the buttons
+      Item {
+        width: parent.width
+        implicitHeight: 21
+        Rectangle {
+          anchors.left: parent.left; anchors.right: parent.right
+          anchors.leftMargin: 4; anchors.rightMargin: 4
+          anchors.verticalCenter: parent.verticalCenter
+          height: 1
+          color: Theme.powerMenuLine
+        }
+      }
     }
   }
 
