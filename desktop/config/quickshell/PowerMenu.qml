@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import Quickshell.Widgets
 import QtQuick
 
 // Power menu: suspend, lock, log out, restart and shut down, in the middle of the screen.
@@ -11,6 +12,8 @@ PanelWindow {
   readonly property int menuWidth: 360
   readonly property int cardMargin: 20
   readonly property int cardPadding: 32
+  readonly property int avatarSize: 100
+  readonly property string userName: Quickshell.env("USER")
   property bool shown: false
 
   implicitWidth: menuWidth
@@ -56,6 +59,54 @@ PanelWindow {
       id: content
       anchors.fill: parent
       anchors.margins: root.cardPadding
+
+      // User photo, name and system name
+      Item {
+        width: parent.width
+        implicitHeight: header.height + 24
+
+        Row {
+          id: header
+          x: 6; y: 8
+          spacing: 14
+
+          ClippingRectangle {
+            id: avatar
+            width: root.avatarSize; height: root.avatarSize
+            radius: root.avatarSize / 2
+            color: Theme.powerAccentSoft
+            border.width: 1
+            border.color: Theme.powerAvatarBorder
+
+            // Without ~/.face, the first letter of the name
+            Text {
+              anchors.centerIn: parent
+              visible: photo.status !== Image.Ready
+              text: root.userName.charAt(0).toUpperCase()
+              color: Theme.powerAccent; font.family: Theme.fontFamily; font.pixelSize: 40; font.weight: Font.DemiBold
+            }
+            Image {
+              id: photo
+              anchors.fill: parent
+              source: "file://" + Quickshell.env("HOME") + "/.face"
+              fillMode: Image.PreserveAspectCrop
+            }
+          }
+
+          Column {
+            anchors.verticalCenter: avatar.verticalCenter
+            spacing: 3
+            Text {
+              text: root.userName
+              color: Theme.powerMenuName; font.family: Theme.fontFamily; font.pixelSize: 16; font.weight: Font.DemiBold
+            }
+            Text {
+              text: "cuckoo linux"
+              color: Theme.dim; font.family: Theme.fontFamily; font.pixelSize: 13
+            }
+          }
+        }
+      }
     }
   }
 
