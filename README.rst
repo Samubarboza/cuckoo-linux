@@ -24,8 +24,8 @@ Packages
 
 Our packages:
 
-- ``cuckoo-desktop`` — the desktop
-- ``cuckoo-greeter`` — the login screen
+- ``cuckoo-desktop`` - the desktop
+- ``cuckoo-greeter`` - the login screen
 
 Programs:
 

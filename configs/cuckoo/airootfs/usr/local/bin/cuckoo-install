@@ -403,11 +403,12 @@ if ! run_step --may-fail 'Setting up the updates' configure_target_repos; then
 fi
 
 # Hide the console cursor and the boot messages and turn on the Plymouth splash,
-# for a clean boot into the login. grub-mkconfig writes a temp file and only
+# for a clean boot into the login. fbcon=nodefer clears the GRUB text from the
+# screen, so it never shows again at login or logout. grub-mkconfig writes a temp file and only
 # replaces grub.cfg on success, so a failure never breaks booting.
 configure_boot_cmdline() {
   local grub_defaults="${target_dir}/etc/default/grub"
-  local options=(vt.global_cursor_default=0 quiet splash)
+  local options=(vt.global_cursor_default=0 quiet splash fbcon=nodefer)
   local option
   [[ -f "${grub_defaults}" ]] || return 1
   # Add each option only if it is missing, so running the installer twice is safe
