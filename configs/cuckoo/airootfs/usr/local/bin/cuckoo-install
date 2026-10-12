@@ -402,29 +402,6 @@ if ! run_step --may-fail 'Setting up the updates' configure_target_repos; then
   update_warning='yes'
 fi
 
-# Hide the console cursor and the boot messages and turn on the Plymouth splash,
-# for a clean boot into the login. fbcon=nodefer clears the GRUB text from the
-# screen, so it never shows again at login or logout. grub-mkconfig writes a temp file and only
-# replaces grub.cfg on success, so a failure never breaks booting.
-configure_boot_cmdline() {
-  local grub_defaults="${target_dir}/etc/default/grub"
-  local options=(vt.global_cursor_default=0 quiet splash fbcon=nodefer)
-  local option
-  [[ -f "${grub_defaults}" ]] || return 1
-  # Add each option only if it is missing, so running the installer twice is safe
-  for option in "${options[@]}"; do
-    grep -qF -- "${option}" "${grub_defaults}" && continue
-    sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 ${option}\"/" "${grub_defaults}" || return 1
-  done
-  arch-chroot "${target_dir}" grub-mkconfig -o /boot/grub/grub.cfg
-}
-
-# The cursor option is polish, not needed to boot, so a failure only warns
-boot_warning=''
-if ! run_step --may-fail 'Setting up the boot' configure_boot_cmdline; then
-  boot_warning='yes'
-fi
-
 # Every line says what to do when it fails: inside a step, set -e does not stop the script
 install_desktop_package() {
   pacman --root "${target_dir}" --dbpath "${target_dir}/var/lib/pacman" \
@@ -444,6 +421,48 @@ install_desktop_package() {
 desktop_warning=''
 if ! run_step --may-fail 'Installing the desktop' install_desktop_package; then
   desktop_warning='yes'
+fi
+
+# Change a GRUB setting, or add it when the file does not have it yet
+set_grub_setting() {
+  local grub_defaults="$1" name="$2" value="$3"
+  if grep -q "^${name}=" "${grub_defaults}"; then
+    # The theme value is a path, so | splits the parts instead of /
+    sed -i "s|^${name}=.*|${name}=${value}|" "${grub_defaults}"
+  else
+    printf '%s=%s\n' "${name}" "${value}" >>"${grub_defaults}"
+  fi
+}
+
+# Hide the console cursor and the boot messages and turn on the Plymouth splash,
+# for a clean boot into the login. fbcon=nodefer clears the GRUB text from the
+# screen, so it never shows again at login or logout. The menu says Cuckoo, uses
+# the Cuckoo theme and keeps only the system, its rescue options and the firmware
+# settings. It runs after the desktop, because the theme comes in that package
+# and grub-mkconfig only adds a theme that is already there.
+# grub-mkconfig writes a temp file and only replaces grub.cfg on success, so a
+# failure never breaks booting.
+configure_grub() {
+  local grub_defaults="${target_dir}/etc/default/grub"
+  local options=(vt.global_cursor_default=0 quiet splash fbcon=nodefer)
+  local option
+  [[ -f "${grub_defaults}" ]] || return 1
+  # Add each option only if it is missing, so running the installer twice is safe
+  for option in "${options[@]}"; do
+    grep -qF -- "${option}" "${grub_defaults}" && continue
+    sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 ${option}\"/" "${grub_defaults}" || return 1
+  done
+  set_grub_setting "${grub_defaults}" GRUB_DISTRIBUTOR '"Cuckoo"' || return 1
+  set_grub_setting "${grub_defaults}" GRUB_DISABLE_BOOTNEXT true || return 1
+  set_grub_setting "${grub_defaults}" GRUB_TIMEOUT 5 || return 1
+  set_grub_setting "${grub_defaults}" GRUB_THEME '"/usr/share/grub/themes/cuckoo/theme.txt"' || return 1
+  arch-chroot "${target_dir}" grub-mkconfig -o /boot/grub/grub.cfg
+}
+
+# These settings are polish, not needed to boot, so a failure only warns
+boot_warning=''
+if ! run_step --may-fail 'Setting up the boot' configure_grub; then
+  boot_warning='yes'
 fi
 
 # The splash is cosmetic: plymouth shows the Cuckoo theme while the system boots.
