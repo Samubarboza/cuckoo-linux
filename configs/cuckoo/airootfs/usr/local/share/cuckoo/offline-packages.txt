@@ -58,6 +58,9 @@ pango
 cairo
 gdk-pixbuf2
 librsvg
+xdg-user-dirs
+grim
+slurp
 
 zed
 vulkan-swrast

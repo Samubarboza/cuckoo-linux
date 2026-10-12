@@ -1,7 +1,7 @@
 # Maintainer: Samubarboza <samubjunior95@gmail.com>
 
 pkgname=cuckoo-desktop
-pkgver=1.5.0
+pkgver=1.6.0
 pkgrel=1
 pkgdesc="Desktop settings for Cuckoo Linux"
 arch=('any')
@@ -18,6 +18,8 @@ depends=('quickshell' 'swaync'                       # the bar with its popups, 
          'ttf-jetbrains-mono-nerd' 'adwaita-fonts'   # the bar lines up with these fonts
          'noto-fonts-emoji'                          # the weather icon is an emoji
          'plymouth'                                  # the boot splash
+         'xdg-user-dirs'                             # the home folders, named in the user language
+         'grim' 'slurp'                              # the screenshot key
          'starship' 'atuin' 'bash-preexec')          # the bash prompt and history
 
 # config goes to /etc/skel, the folder every new user starts with.
