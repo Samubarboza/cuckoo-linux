@@ -20,7 +20,7 @@ logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=9
+total_steps=10
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
@@ -402,6 +402,20 @@ if ! run_step --may-fail 'Setting up the updates' configure_target_repos; then
   update_warning='yes'
 fi
 
+# turn on ufw at boot. ufw enable here chane the ISO, not the disk
+configure_firewall() {
+  local ufw_settings="${target_dir}/etc/ufw/ufw.conf"
+  [[ -f "${ufw_settings}" ]] || return 1
+  sed -i 's/^ENABLED=.*/ENABLED=yes/' "${ufw_settings}" || return 1
+  grep -qx 'ENABLED=yes' "${ufw_settings}"
+}
+
+# The system boots without it, so a failure only warns
+firewall_warning=''
+if ! run_step --may-fail 'Turning on the firewall' configure_firewall; then
+  firewall_warning='yes'
+fi
+
 # Every line says what to do when it fails: inside a step, set -e does not stop the script
 install_desktop_package() {
   pacman --root "${target_dir}" --dbpath "${target_dir}/var/lib/pacman" \
@@ -434,14 +448,8 @@ set_grub_setting() {
   fi
 }
 
-# Hide the console cursor and the boot messages and turn on the Plymouth splash,
-# for a clean boot into the login. fbcon=nodefer clears the GRUB text from the
-# screen, so it never shows again at login or logout. The menu says Cuckoo, uses
-# the Cuckoo theme and keeps only the system, its rescue options and the firmware
-# settings. It runs after the desktop, because the theme comes in that package
-# and grub-mkconfig only adds a theme that is already there.
-# grub-mkconfig writes a temp file and only replaces grub.cfg on success, so a
-# failure never breaks booting.
+# Runs after the desktop: the GRUB theme comes in that package.
+# fbcon=nodefer clears the GRUB text. A failed grub-mkconfig never breaks the boot.
 configure_grub() {
   local grub_defaults="${target_dir}/etc/default/grub"
   local options=(vt.global_cursor_default=0 quiet splash fbcon=nodefer)
@@ -526,6 +534,10 @@ if [[ -n "${boot_warning}" ]]; then
 fi
 if [[ -n "${update_warning}" ]]; then
   print_centered_line 'The update settings were not fully set.' "${color_text}"
+  printf '\n'
+fi
+if [[ -n "${firewall_warning}" ]]; then
+  print_centered_line 'The firewall was not turned on.' "${color_text}"
   printf '\n'
 fi
 if [[ -n "${splash_warning}" ]]; then
