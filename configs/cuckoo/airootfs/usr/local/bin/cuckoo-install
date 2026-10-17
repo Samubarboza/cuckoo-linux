@@ -643,7 +643,7 @@ if [[ -n "${tpm_unlock}" ]]; then
   run_step 'Preparing the TPM' prepare_tpm_unlock
 fi
 
-# Without the TPM, the desktop starts right after the disk password
+# Without the TPM, the desktop starts right after the password at start
 configure_disk_encryption() {
   arch-chroot "${target_dir}" systemctl disable fstrim.timer || return 1
   [[ -z "${tpm_unlock}" ]] || return 0
@@ -755,7 +755,7 @@ if [[ -n "${splash_warning}" ]]; then
   printf '\n'
 fi
 if [[ -n "${disk_encryption_warning}" ]]; then
-  print_centered_line 'The automatic login after the disk password was not set.' "${color_text}"
+  print_centered_line 'The automatic login after the password at start was not set.' "${color_text}"
   printf '\n'
 fi
 if [[ -n "${snapshots_warning}" ]]; then
@@ -783,15 +783,15 @@ elif [[ -n "${secure_boot_on}" ]]; then
   printf '\n'
 fi
 if [[ -n "${tpm_unlock}" ]]; then
-  print_centered_line 'The first start asks for the disk password. After that, the TPM chip opens the disk by itself.' "${color_text}"
-  print_centered_line 'Keep the disk password: it opens the disk when the TPM can not.' "${color_text}"
+  print_centered_line 'The first start asks for your password. After that, the TPM chip opens the disk by itself.' "${color_text}"
+  print_centered_line 'Your password opens the disk when the TPM can not.' "${color_text}"
   print_centered_line 'If it asks again (for example after a BIOS update), run: sudo cuckoo-tpm-enroll' "${color_text}"
   printf '\n'
 elif [[ -n "${disk_encryption_on}" && -z "${secure_boot_on}" ]]; then
-  print_centered_line 'Secure Boot is off, so the computer asks for the disk password at each start.' "${color_text}"
+  print_centered_line 'Secure Boot is off, so the computer asks for your password at each start.' "${color_text}"
   printf '\n'
 elif [[ -n "${disk_encryption_on}" ]]; then
-  print_centered_line 'This computer has no TPM 2.0 chip, so it asks for the disk password at each start.' "${color_text}"
+  print_centered_line 'This computer has no TPM 2.0 chip, so it asks for your password at each start.' "${color_text}"
   printf '\n'
 fi
 

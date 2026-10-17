@@ -35,8 +35,8 @@ fun on_boot_progress(duration, progress) {
 
 Plymouth.SetBootProgressFunction(on_boot_progress);
 
-# Disk password: a fixed title and one dot for each letter, centered below the bar
-password_title = Image.Text("Disk password", 0.431, 0.478, 0.533);
+# Password: a fixed title and one dot for each letter, centered below the bar
+password_title = Image.Text("Password", 0.431, 0.478, 0.533);
 password_title_sprite = Sprite(password_title);
 password_title_sprite.SetPosition((screen_width - password_title.GetWidth()) / 2, bar_y + 40, 3);
 password_title_sprite.SetOpacity(0);

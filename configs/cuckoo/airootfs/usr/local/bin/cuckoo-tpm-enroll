@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Let the TPM chip open the disk at boot. It needs a TPM 2.0 chip and Secure Boot on.
-# On the first start it uses the key the installer left. Later it asks for the disk password.
+# On the first start it uses the key the installer left. Later it asks for your password.
 
 set -euo pipefail
 
@@ -17,7 +17,7 @@ fail() {
 }
 
 ((EUID == 0)) || fail 'run this as root.'
-grep -q 'tpm2-device=auto' /proc/cmdline || fail 'this system was installed to always ask for the disk password.'
+grep -q 'tpm2-device=auto' /proc/cmdline || fail 'this system was installed to always ask for your password.'
 systemd-analyze has-tpm2 &>/dev/null || fail 'no TPM 2.0 chip was found.'
 [[ "$(od --skip-bytes=4 --read-bytes=1 --format=u1 --address-radix=n -- "${secure_boot_variable}" 2>/dev/null)" == *1 ]] \
   || fail 'Secure Boot is off. Turn it on in the BIOS and run this again.'
