@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Put an EFI file in the boot partition. The old file stays until the new one is complete.
+
+set -euo pipefail
+
+source_file="$1"
+boot_file="$2"
+temporary_file="${boot_file}.tmp"
+trap 'rm -f -- "${temporary_file}"' EXIT
+
+if ! cp -- "${source_file}" "${temporary_file}"; then
+  printf "ERROR: '%s' could not be copied. The last working version stays.\n" "${boot_file}" >&2
+  exit 1
+fi
+mv -f -- "${temporary_file}" "${boot_file}"
