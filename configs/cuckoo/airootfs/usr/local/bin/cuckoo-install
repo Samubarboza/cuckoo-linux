@@ -24,7 +24,7 @@ logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="4GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=13
+total_steps=14
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
@@ -285,19 +285,31 @@ format_disk() {
 }
 
 mount_disk() {
-  local subvolume
+  local btrfs_subvolume mount_point
+  # Each subvolume and its folder. The root goes first, the others are mounted inside it.
+  local btrfs_subvolumes=(
+    '@:/'
+    '@home:/home'
+    '@log:/var/log'
+    '@pkg:/var/cache/pacman/pkg'
+    '@snapshots:/.snapshots'
+    '@docker:/var/lib/docker'
+    '@containerd:/var/lib/containerd'
+  )
   # Always say the file system, otherwise mount tries others first and the screen fills with errors
   mount -t btrfs -- "${root_partition}" "${target_dir}"
-  for subvolume in @ @home @log @pkg; do
-    btrfs subvolume create "${target_dir}/${subvolume}"
+  for btrfs_subvolume in "${btrfs_subvolumes[@]}"; do
+    btrfs subvolume create "${target_dir}/${btrfs_subvolume%%:*}"
   done
   umount -- "${target_dir}"
 
-  mount -t btrfs -o "${btrfs_mount_options},subvol=@" -- "${root_partition}" "${target_dir}"
-  mkdir -p -- "${target_dir}/home" "${target_dir}/var/log" "${target_dir}/var/cache/pacman/pkg" "${target_dir}/boot"
-  mount -t btrfs -o "${btrfs_mount_options},subvol=@home" -- "${root_partition}" "${target_dir}/home"
-  mount -t btrfs -o "${btrfs_mount_options},subvol=@log" -- "${root_partition}" "${target_dir}/var/log"
-  mount -t btrfs -o "${btrfs_mount_options},subvol=@pkg" -- "${root_partition}" "${target_dir}/var/cache/pacman/pkg"
+  for btrfs_subvolume in "${btrfs_subvolumes[@]}"; do
+    mount_point="${target_dir}${btrfs_subvolume#*:}"
+    mkdir -p -- "${mount_point}"
+    mount -t btrfs -o "${btrfs_mount_options},subvol=${btrfs_subvolume%%:*}" -- "${root_partition}" "${mount_point}"
+  done
+  chmod 0700 -- "${target_dir}/.snapshots"
+  mkdir -p -- "${target_dir}/boot"
   mount -t vfat -o fmask=0077,dmask=0077 -- "${esp_partition}" "${target_dir}/boot"
 }
 
@@ -358,6 +370,9 @@ configure_boot() {
   kernel_options="root=UUID=${root_uuid} rootflags=subvol=@ rw rootfstype=btrfs zswap.enabled=0 loglevel=3 quiet splash vt.global_cursor_default=0 fbcon=nodefer"
   printf '%s\n' "${kernel_options}" >"${target_dir}/etc/kernel/cmdline"
   printf '%s nomodeset\n' "${kernel_options}" >"${target_dir}/etc/kernel/cmdline-safe-video"
+  # The root line of fstab, without its subvolume
+  sed -E -i '/^[^#[:space:]]+[[:space:]]+\/[[:space:]]/ { s/,subvolid=[0-9]+//; s/,subvol=\/@([,[:space:]])/\1/ }' \
+    "${target_dir}/etc/fstab"
 
   rm -f -- "${target_dir}/boot/initramfs-linux.img"
   install -Dm 644 -- "${boot_files_dir}/shimx64.efi" "${target_dir}/boot/EFI/BOOT/BOOTX64.EFI"
@@ -596,6 +611,18 @@ if ! run_step --may-fail 'Installing your video drivers' install_hardware_driver
   drivers_warning='yes'
 fi
 
+# The last step, so the install itself saves no snapshots
+configure_snapshots() {
+  install -Dm 755 -t "${target_dir}/usr/local/bin/" -- /usr/local/bin/cuckoo-snapshot /usr/local/bin/cuckoo-keep-snapshot || return 1
+  install -Dm 644 -t "${target_dir}/etc/pacman.d/hooks/" -- "${boot_files_dir}/cuckoo-snapshot.hook"
+}
+
+# The system boots without snapshots, so a failure only warns
+snapshots_warning=''
+if ! run_step --may-fail 'Turning on snapshots' configure_snapshots; then
+  snapshots_warning='yes'
+fi
+
 save_log_to_disk
 # The data is already on the disk, so a failed unmount only goes to the log
 umount -R -- "${target_dir}" >>"${log_file}" 2>&1 || true
@@ -634,6 +661,10 @@ if [[ -n "${docker_warning}" ]]; then
 fi
 if [[ -n "${splash_warning}" ]]; then
   print_centered_line 'The boot splash was not set up.' "${color_text}"
+  printf '\n'
+fi
+if [[ -n "${snapshots_warning}" ]]; then
+  print_centered_line 'Snapshots before updates were not turned on.' "${color_text}"
   printf '\n'
 fi
 if [[ -n "${secure_boot_on}" && -n "${key_enrollment_warning}" ]]; then
