@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Make the greetd settings for this boot. If the disk password was asked, the user in
+# cuckoo-autologin starts the desktop right away. After a logout, the login comes back.
+
+set -euo pipefail
+
+settings_file="/etc/greetd/cuckoo.toml"
+autologin_file="/etc/greetd/cuckoo-autologin"
+session_file="/usr/share/wayland-sessions/cuckoo.desktop"
+boot_settings_file="/run/cuckoo-greetd.toml"
+
+cp -- "${settings_file}" "${boot_settings_file}"
+[[ -s "${autologin_file}" && -r "${session_file}" ]] || exit 0
+
+autologin_user="$(<"${autologin_file}")"
+session_command="$(sed -n 's/^Exec=//p' "${session_file}")"
+printf '\n[initial_session]\ncommand = "env XDG_SESSION_TYPE=wayland %s"\nuser = "%s"\n' \
+  "${session_command}" "${autologin_user}" >>"${boot_settings_file}"

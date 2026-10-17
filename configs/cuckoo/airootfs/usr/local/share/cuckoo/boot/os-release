@@ -1,0 +1,5 @@
+NAME="Cuckoo Linux"
+PRETTY_NAME="Cuckoo Linux"
+ID=cuckoo
+ID_LIKE=arch
+IMAGE_ID=cuckoo-1-normal

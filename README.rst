@@ -29,7 +29,7 @@ Our packages:
 
 Programs:
 
-- **Base:** linux, linux-firmware, grub, efibootmgr, btrfs-progs, zram-generator, networkmanager, pipewire, bluez, power-profiles-daemon, sudo, git, nano, python
+- **Base:** linux, linux-firmware, systemd-boot, btrfs-progs, zram-generator, networkmanager, pipewire, bluez, power-profiles-daemon, sudo, git, nano, python
 - **Desktop:** hyprland, quickshell, swaybg, alacritty, greetd, plymouth, swaync, hyprlock, hypridle, papirus-icon-theme
 - **Editor:** zed
 - **Terminal:** starship, atuin, zsh, tmux, curl, openssh, htop, ripgrep, fzf
@@ -80,11 +80,17 @@ You need Docker, KVM and a Wayland session.
 
       ./scripts/install_vm.sh
 
-6. Start the installed system. Secure Boot is off for now, because the installed system is not signed yet.
+6. Start the installed system without Secure Boot.
 
    .. code:: sh
 
       ./scripts/boot_vm_no_secureboot.sh
+
+7. Start the installed system with Secure Boot.
+
+   .. code:: sh
+
+      ./scripts/boot_vm.sh
 
 The scripts need two files in ``vm/``: ``OVMF_VARS.fd`` and ``OVMF_VARS_sin_secureboot.fd``.
 
@@ -108,6 +114,5 @@ Cuckoo Linux is a modified copy of `archiso <https://gitlab.archlinux.org/archli
 It uses GPL-3.0-or-later. See ``LICENSE``.
 ``shimx64.efi`` and ``mmx64.efi`` come from Fedora, without changes. They use a BSD license.
 The power menu icons come from `Lucide <https://lucide.dev>`_ (ISC license) and `Feather <https://feathericons.com>`_ (MIT license).
-The GRUB menu font is `Adwaita Sans <https://gitlab.gnome.org/GNOME/adwaita-fonts>`_, made into a GRUB font. It uses the SIL Open Font License.
 
 Cuckoo Linux is not an official Arch Linux or Fedora project.

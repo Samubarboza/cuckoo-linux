@@ -4,7 +4,7 @@
 # The version follows the ReGreet release we build from.
 pkgname=cuckoo-greeter
 pkgver=0.5.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Login screen for Cuckoo Linux"
 arch=('x86_64')
 url="https://github.com/Samubarboza/cuckoo-linux"
@@ -31,8 +31,10 @@ source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs
         "regreet.css"
         "hyprland.conf"
         "lock.svg"
-        "greetd-override.conf")
+        "greetd-override.conf"
+        "greetd-config")
 sha256sums=('7e26799dffdede183fc62d12aedbda5fea92d7d9802a180755d8a1d1fd93f2f7'
+            'SKIP'
             'SKIP'
             'SKIP'
             'SKIP'
@@ -74,4 +76,5 @@ package() {
     install -Dm 0644 -- "lock.svg" "${pkgdir}/usr/share/cuckoo/lock.svg"
     install -Dm 0644 -- "greetd-override.conf" \
         "${pkgdir}/usr/lib/systemd/system/greetd.service.d/cuckoo.conf"
+    install -Dm 0755 -- "greetd-config" "${pkgdir}/usr/lib/cuckoo-greeter/greetd-config"
 }

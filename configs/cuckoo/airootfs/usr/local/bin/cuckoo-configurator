@@ -234,6 +234,42 @@ ask_user() {
   chmod 600 -- "${answers_dir}/password"
 }
 
+# True when the text has only plain ASCII letters, numbers and symbols
+is_plain_text() (
+  LC_ALL=C
+  [[ "$1" =~ ^[[:print:]]+$ ]]
+)
+
+ask_disk_encryption() {
+  local answer first_password second_password
+  show_title
+  answer="$(gum choose --header 'Encrypt the disk?' 'No' 'Yes, encrypt the disk')" || cancel_install
+  if [[ "${answer}" == 'No' ]]; then
+    rm -f -- "${answers_dir}/disk_password"
+    return 0
+  fi
+
+  while true; do
+    show_title
+    gum style --foreground 3 'If you forget this password, nobody can open the disk and your files are lost.'
+    first_password="$(gum input --password --placeholder 'Disk password')" || cancel_install
+    second_password="$(gum input --password --placeholder 'Repeat the disk password')" || cancel_install
+    if [[ -z "${first_password}" ]]; then
+      gum style --foreground 1 'The password can not be empty.'
+    elif [[ "${first_password}" != "${second_password}" ]]; then
+      gum style --foreground 1 'The passwords are not the same.'
+    elif ! is_plain_text "${first_password}"; then
+      gum style --foreground 1 'Use only letters without accents, numbers and simple symbols.'
+    else
+      break
+    fi
+    sleep 2
+  done
+
+  printf '%s\n' "${first_password}" >"${answers_dir}/disk_password"
+  chmod 600 -- "${answers_dir}/disk_password"
+}
+
 if ! command -v gum &>/dev/null; then
   printf 'ERROR: gum was not found.\n' >&2
   exit 1
@@ -250,15 +286,20 @@ ask_wifi
 ask_timezone
 ask_disk
 ask_user
+ask_disk_encryption
+
+disk_encryption='no'
+[[ -f "${answers_dir}/disk_password" ]] && disk_encryption='yes'
 
 show_title
 gum style --border rounded --padding '0 2' --border-foreground 8 \
-  "$(printf 'Keyboard   %s\nLanguage   %s\nTimezone   %s\nDisk       %s  (everything on it is erased)\nUser       %s' \
+  "$(printf 'Keyboard   %s\nLanguage   %s\nTimezone   %s\nDisk       %s  (everything on it is erased)\nUser       %s\nEncryption %s' \
     "$(<"${answers_dir}/keymap")" \
     "$(<"${answers_dir}/locale")" \
     "$(<"${answers_dir}/timezone")" \
     "$(<"${answers_dir}/disk")" \
-    "$(<"${answers_dir}/username")")"
+    "$(<"${answers_dir}/username")" \
+    "${disk_encryption}")"
 printf '\n'
 
 if gum confirm 'Install Cuckoo Linux now?' --affirmative 'Yes, install' --negative 'No, go to the console'; then

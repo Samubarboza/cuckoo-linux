@@ -34,3 +34,36 @@ fun on_boot_progress(duration, progress) {
 }
 
 Plymouth.SetBootProgressFunction(on_boot_progress);
+
+# Disk password: a fixed title and one dot for each letter, centered below the bar
+password_title = Image.Text("Disk password", 0.431, 0.478, 0.533);
+password_title_sprite = Sprite(password_title);
+password_title_sprite.SetPosition((screen_width - password_title.GetWidth()) / 2, bar_y + 40, 3);
+password_title_sprite.SetOpacity(0);
+
+password_dots_sprite = Sprite();
+password_dots_sprite.SetOpacity(0);
+
+fun display_password(prompt, bullets) {
+    password_title_sprite.SetOpacity(1);
+    if (bullets < 1) {
+        password_dots_sprite.SetOpacity(0);
+        return;
+    }
+    password_dots_text = "";
+    for (dot = 0; dot < bullets; dot++) {
+        password_dots_text += "•";
+    }
+    password_dots = Image.Text(password_dots_text, 0.863, 0.890, 0.918);
+    password_dots_sprite.SetImage(password_dots);
+    password_dots_sprite.SetPosition((screen_width - password_dots.GetWidth()) / 2, bar_y + 70, 3);
+    password_dots_sprite.SetOpacity(1);
+}
+
+fun display_normal() {
+    password_title_sprite.SetOpacity(0);
+    password_dots_sprite.SetOpacity(0);
+}
+
+Plymouth.SetDisplayPasswordFunction(display_password);
+Plymouth.SetDisplayNormalFunction(display_normal);
