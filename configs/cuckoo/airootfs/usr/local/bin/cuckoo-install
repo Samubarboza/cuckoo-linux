@@ -18,7 +18,7 @@ target_mirrorlist_file="/usr/local/share/cuckoo/mirrorlist"
 docker_settings_file="/usr/local/share/cuckoo/docker-daemon.json"
 logo_file="/usr/local/share/cuckoo/logo.txt"
 logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
-esp_size="1GiB"
+esp_size="4GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
 total_steps=11
@@ -295,7 +295,7 @@ mount_disk() {
   mount -t btrfs -o "${btrfs_mount_options},subvol=@home" -- "${root_partition}" "${target_dir}/home"
   mount -t btrfs -o "${btrfs_mount_options},subvol=@log" -- "${root_partition}" "${target_dir}/var/log"
   mount -t btrfs -o "${btrfs_mount_options},subvol=@pkg" -- "${root_partition}" "${target_dir}/var/cache/pacman/pkg"
-  mount -t vfat -- "${esp_partition}" "${target_dir}/boot"
+  mount -t vfat -o fmask=0077,dmask=0077 -- "${esp_partition}" "${target_dir}/boot"
 }
 
 write_archinstall_files() {
