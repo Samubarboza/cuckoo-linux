@@ -613,7 +613,7 @@ fi
 
 # The last step, so the install itself saves no snapshots
 configure_snapshots() {
-  install -Dm 755 -t "${target_dir}/usr/local/bin/" -- /usr/local/bin/cuckoo-snapshot || return 1
+  install -Dm 755 -t "${target_dir}/usr/local/bin/" -- /usr/local/bin/cuckoo-snapshot /usr/local/bin/cuckoo-keep-snapshot || return 1
   install -Dm 644 -t "${target_dir}/etc/pacman.d/hooks/" -- "${boot_files_dir}/cuckoo-snapshot.hook"
 }
 
