@@ -1,0 +1,71 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# pacman runs this before each change. It saves a snapshot of the system that starts from the boot menu.
+
+set -euo pipefail
+shopt -s nullglob
+
+snapshots_dir="/.snapshots"
+snapshots_to_keep=5
+boot_images_dir="/boot/EFI/Linux"
+snapshot_time="${EPOCHSECONDS}"
+printf -v snapshot_id '%(%Y%m%d-%H%M%S)T' "${snapshot_time}"
+printf -v snapshot_date '%(%Y-%m-%d %H:%M)T' "${snapshot_time}"
+
+remove_snapshot() {
+  local old_snapshot_id="$1"
+  if [[ -d "${snapshots_dir}/${old_snapshot_id}" ]]; then
+    btrfs subvolume delete --recursive "${snapshots_dir}/${old_snapshot_id}" || return 1
+  fi
+  rm -f -- "${boot_images_dir}/cuckoo-snapshot-${old_snapshot_id}.efi" "${boot_images_dir}/cuckoo-snapshot-${old_snapshot_id}.efi.new"
+}
+
+remove_old_snapshots() {
+  local saved_snapshots=("${snapshots_dir}"/*/) saved_snapshot
+  local snapshots_to_remove=$((${#saved_snapshots[@]} - snapshots_to_keep + 1))
+  ((snapshots_to_remove > 0)) || return 0
+  for saved_snapshot in "${saved_snapshots[@]:0:snapshots_to_remove}"; do
+    saved_snapshot="${saved_snapshot%/}"
+    remove_snapshot "${saved_snapshot##*/}" || return 1
+  done
+}
+
+save_snapshot() {
+  local snapshot_cmdline_file snapshot_osrelease_file
+  temporary_dir="$(mktemp -d)" || return 1
+  trap 'rm -rf -- "${temporary_dir}"' EXIT
+  snapshot_cmdline_file="${temporary_dir}/cmdline"
+  snapshot_osrelease_file="${temporary_dir}/os-release"
+
+  remove_old_snapshots || return 1
+  btrfs subvolume snapshot / "${snapshots_dir}/${snapshot_id}" || return 1
+  # pacman is running, so its lock is in the snapshot too
+  rm -f -- "${snapshots_dir}/${snapshot_id}/var/lib/pacman/db.lck" || return 1
+
+  sed "s|rootflags=subvol=@ |rootflags=subvol=@snapshots/${snapshot_id} |" /etc/kernel/cmdline >"${snapshot_cmdline_file}" || return 1
+  if cmp -s /etc/kernel/cmdline "${snapshot_cmdline_file}"; then
+    return 1
+  fi
+
+  {
+    grep -v -E '^(PRETTY_NAME|IMAGE_ID)=' /etc/kernel/os-release
+    printf 'PRETTY_NAME="Cuckoo Linux (snapshot %s)"\n' "${snapshot_date}"
+    printf 'IMAGE_ID=cuckoo-4-snapshot\nIMAGE_VERSION=%s\n' "${snapshot_id}"
+  } >"${snapshot_osrelease_file}" || return 1
+
+  mkinitcpio -k /boot/vmlinuz-linux -U "${boot_images_dir}/cuckoo-snapshot-${snapshot_id}.efi.new" \
+    --cmdline "${snapshot_cmdline_file}" --osrelease "${snapshot_osrelease_file}" || return 1
+  [[ -f "${boot_images_dir}/cuckoo-snapshot-${snapshot_id}.efi" ]]
+}
+
+if [[ "$(findmnt -no FSROOT /)" != '/@' ]]; then
+  printf 'You are on a snapshot. Keep it with: sudo cuckoo-keep-snapshot. Or restart into Cuckoo Linux.\n' >&2
+  exit 1
+fi
+
+if ! save_snapshot; then
+  remove_snapshot "${snapshot_id}" || true
+  printf 'WARNING: the snapshot could not be saved. The update goes on without it.\n' >&2
+fi
