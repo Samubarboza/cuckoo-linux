@@ -86,6 +86,12 @@ You need Docker, KVM and a Wayland session.
 
       ./scripts/boot_vm_no_secureboot.sh
 
+7. Start the installed system with Secure Boot.
+
+   .. code:: sh
+
+      ./scripts/boot_vm.sh
+
 The scripts need two files in ``vm/``: ``OVMF_VARS.fd`` and ``OVMF_VARS_sin_secureboot.fd``.
 
 Check the code
