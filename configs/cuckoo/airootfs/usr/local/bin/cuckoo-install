@@ -10,6 +10,7 @@ set -e -u
 answers_dir="${CUCKOO_ANSWERS_DIR:-/tmp/cuckoo}"
 target_dir="${CUCKOO_TARGET_DIR:-/mnt}"
 log_file="${answers_dir}/install.log"
+recovery_key_file="${answers_dir}/recovery-key"
 hardware_script="/usr/local/bin/cuckoo-hardware"
 hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
 boot_files_dir="/usr/local/share/cuckoo/boot"
@@ -283,11 +284,18 @@ format_disk() {
   wipefs --all -- "${esp_partition}" "${root_partition}"
   mkfs.fat -F 32 -n CUCKOO_ESP -- "${esp_partition}"
   # printf is part of bash, so the password is not shown in the process list
-  if [[ -n "${disk_password}" ]]; then
-    printf '%s' "${disk_password}" | cryptsetup luksFormat --type luks2 --batch-mode --key-file - "${root_partition}"
-    printf '%s' "${disk_password}" | cryptsetup open --key-file - "${root_partition}" root
+  if [[ -n "${disk_encryption_on}" ]]; then
+    printf '%s' "${password}" | cryptsetup luksFormat --type luks2 --batch-mode --key-file - "${root_partition}"
+    printf '%s' "${password}" | cryptsetup open --key-file - "${root_partition}" root
   fi
   mkfs.btrfs -f -L CUCKOO -- "${root_device}"
+}
+
+# A key that opens the disk when the password can not. It goes only to a root file:
+# the key and its QR code never reach the log.
+create_recovery_key() {
+  (umask 077 && PASSWORD="${password}" systemd-cryptenroll --recovery-key "${root_partition}" >"${recovery_key_file}" 2>/dev/null)
+  [[ -s "${recovery_key_file}" ]]
 }
 
 mount_disk() {
@@ -374,8 +382,8 @@ configure_boot() {
   install -Dm 644 -t "${target_dir}/etc/pacman.d/hooks/" -- "${boot_files_dir}/cuckoo-systemd-boot.hook"
 
   root_uuid="$(blkid -s UUID -o value -- "${root_device}")"
-  kernel_options="root=UUID=${root_uuid} rootflags=subvol=@ rw rootfstype=btrfs zswap.enabled=0 loglevel=3 quiet splash vt.global_cursor_default=0 fbcon=nodefer"
-  if [[ -n "${disk_password}" ]]; then
+  kernel_options="root=UUID=${root_uuid} rootflags=subvol=@ rw rootfstype=btrfs zswap.enabled=0 loglevel=3 quiet splash plymouth.ignore-serial-consoles vt.global_cursor_default=0 fbcon=nodefer"
+  if [[ -n "${disk_encryption_on}" ]]; then
     luks_uuid="$(blkid -s UUID -o value -- "${root_partition}")"
     luks_options="rd.luks.name=${luks_uuid}=root"
     if [[ -n "${tpm_unlock}" ]]; then
@@ -460,9 +468,9 @@ locale="$(read_answer locale)"
 username="$(read_answer username)"
 password="$(read_answer password)"
 timezone="$(read_answer timezone)"
-disk_password=''
-if [[ -f "${answers_dir}/disk_password" ]]; then
-  disk_password="$(<"${answers_dir}/disk_password")"
+disk_encryption_on=''
+if [[ -f "${answers_dir}/disk_encryption" ]]; then
+  disk_encryption_on='yes'
 fi
 
 [[ -b "${disk}" ]] || fail "'${disk}' is not a disk."
@@ -481,12 +489,13 @@ if is_secure_boot_on; then
   total_steps=$((total_steps + 1))
   key_enrollment_code="$(create_key_enrollment_code)"
 fi
-if [[ -n "${disk_password}" ]]; then
-  total_steps=$((total_steps + 1))
+# The recovery key and the encrypted disk settings
+if [[ -n "${disk_encryption_on}" ]]; then
+  total_steps=$((total_steps + 2))
 fi
 # The TPM opens the disk only with encryption, Secure Boot and a TPM 2.0 chip
 tpm_unlock=''
-if [[ -n "${disk_password}" && -n "${secure_boot_on}" ]] && has_tpm2; then
+if [[ -n "${disk_encryption_on}" && -n "${secure_boot_on}" ]] && has_tpm2; then
   tpm_unlock='yes'
   total_steps=$((total_steps + 1))
 fi
@@ -498,6 +507,8 @@ logo_centered="${logo}"
 center_interface
 
 : >"${log_file}"
+# A key from an earlier try must never show up on the final screen
+rm -f -- "${recovery_key_file}"
 printf '\033[2J\033[H'
 setup_palette
 
@@ -507,12 +518,15 @@ mapfile -t old_partition_uuids < <(lsblk --noheadings --output PARTUUID -- "${di
 run_step 'Preparing the disk' prepare_disk
 find_partitions
 # The system goes inside the encrypted disk, or right on the partition
-if [[ -n "${disk_password}" ]]; then
+if [[ -n "${disk_encryption_on}" ]]; then
   root_device='/dev/mapper/root'
 else
   root_device="${root_partition}"
 fi
 run_step 'Formatting the disk' format_disk
+if [[ -n "${disk_encryption_on}" ]]; then
+  run_step 'Creating the recovery key' create_recovery_key
+fi
 run_step 'Mounting the disk' mount_disk
 write_archinstall_files
 packages_total="$(count_target_packages)"
@@ -619,7 +633,7 @@ prepare_tpm_unlock() {
   local first_start_key="${target_dir}/var/lib/cuckoo/tpm-enroll.key"
   install -d -m 0700 -- "${target_dir}/var/lib/cuckoo"
   (umask 077 && head -c 64 /dev/urandom >"${first_start_key}")
-  printf '%s' "${disk_password}" | cryptsetup luksAddKey --key-file - "${root_partition}" "${first_start_key}"
+  printf '%s' "${password}" | cryptsetup luksAddKey --key-file - "${root_partition}" "${first_start_key}"
   install -Dm 755 -t "${target_dir}/usr/local/bin/" -- /usr/local/bin/cuckoo-tpm-enroll
   install -Dm 644 -t "${target_dir}/etc/systemd/system/" -- "${boot_files_dir}/cuckoo-tpm-enroll.service"
   arch-chroot "${target_dir}" systemctl enable cuckoo-tpm-enroll.service
@@ -629,7 +643,7 @@ if [[ -n "${tpm_unlock}" ]]; then
   run_step 'Preparing the TPM' prepare_tpm_unlock
 fi
 
-# Without the TPM, the desktop starts right after the disk password
+# Without the TPM, the desktop starts right after the password at start
 configure_disk_encryption() {
   arch-chroot "${target_dir}" systemctl disable fstrim.timer || return 1
   [[ -z "${tpm_unlock}" ]] || return 0
@@ -639,7 +653,7 @@ configure_disk_encryption() {
 
 # The system boots without it, so a failure only warns
 disk_encryption_warning=''
-if [[ -n "${disk_password}" ]] && ! run_step --may-fail 'Setting up the encrypted disk' configure_disk_encryption; then
+if [[ -n "${disk_encryption_on}" ]] && ! run_step --may-fail 'Setting up the encrypted disk' configure_disk_encryption; then
   disk_encryption_warning='yes'
 fi
 
@@ -694,7 +708,7 @@ fi
 save_log_to_disk
 # The data is already on the disk, so a failed unmount only goes to the log
 umount -R -- "${target_dir}" >>"${log_file}" 2>&1 || true
-if [[ -n "${disk_password}" ]]; then
+if [[ -n "${disk_encryption_on}" ]]; then
   cryptsetup close root >>"${log_file}" 2>&1 || true
 fi
 
@@ -704,6 +718,12 @@ printf '\033[2J\033[%s;1H' "${screen_top_row}"
 print_centered_line 'Done! Cuckoo Linux is installed.' "${color_text}"
 print_centered_line 'Remove the USB drive.' "${color_text}"
 printf '\n'
+if [[ -s "${recovery_key_file}" ]]; then
+  print_centered_line 'Write this recovery key down. It opens the disk if you forget your password.' "${color_text}"
+  print_centered_line "$(<"${recovery_key_file}")" "${color_accent}"
+  printf '\n'
+  rm -f -- "${recovery_key_file}"
+fi
 if [[ -n "${desktop_warning}" ]]; then
   print_centered_line 'The desktop settings were not installed.' "${color_text}"
   printf '\n'
@@ -735,7 +755,7 @@ if [[ -n "${splash_warning}" ]]; then
   printf '\n'
 fi
 if [[ -n "${disk_encryption_warning}" ]]; then
-  print_centered_line 'The automatic login after the disk password was not set.' "${color_text}"
+  print_centered_line 'The automatic login after the password at start was not set.' "${color_text}"
   printf '\n'
 fi
 if [[ -n "${snapshots_warning}" ]]; then
@@ -763,15 +783,15 @@ elif [[ -n "${secure_boot_on}" ]]; then
   printf '\n'
 fi
 if [[ -n "${tpm_unlock}" ]]; then
-  print_centered_line 'The first start asks for the disk password. After that, the TPM chip opens the disk by itself.' "${color_text}"
-  print_centered_line 'Keep the disk password: it opens the disk when the TPM can not.' "${color_text}"
+  print_centered_line 'The first start asks for your password. After that, the TPM chip opens the disk by itself.' "${color_text}"
+  print_centered_line 'Your password opens the disk when the TPM can not.' "${color_text}"
   print_centered_line 'If it asks again (for example after a BIOS update), run: sudo cuckoo-tpm-enroll' "${color_text}"
   printf '\n'
-elif [[ -n "${disk_password}" && -z "${secure_boot_on}" ]]; then
-  print_centered_line 'Secure Boot is off, so the computer asks for the disk password at each start.' "${color_text}"
+elif [[ -n "${disk_encryption_on}" && -z "${secure_boot_on}" ]]; then
+  print_centered_line 'Secure Boot is off, so the computer asks for your password at each start.' "${color_text}"
   printf '\n'
-elif [[ -n "${disk_password}" ]]; then
-  print_centered_line 'This computer has no TPM 2.0 chip, so it asks for the disk password at each start.' "${color_text}"
+elif [[ -n "${disk_encryption_on}" ]]; then
+  print_centered_line 'This computer has no TPM 2.0 chip, so it asks for your password at each start.' "${color_text}"
   printf '\n'
 fi
 
