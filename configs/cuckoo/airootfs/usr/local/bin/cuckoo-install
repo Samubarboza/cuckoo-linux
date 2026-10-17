@@ -22,7 +22,7 @@ logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="4GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=11
+total_steps=12
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
@@ -355,6 +355,17 @@ configure_boot() {
   arch-chroot "${target_dir}" mkinitcpio -P
 }
 
+# One Cuckoo entry in the boot menu of the computer. Entries of other disks stay.
+configure_boot_entry() {
+  local old_partition_uuid boot_number
+  for old_partition_uuid in "${old_partition_uuids[@]}"; do
+    while read -r boot_number; do
+      efibootmgr --quiet --delete-bootnum --bootnum "${boot_number}" || return 1
+    done < <(efibootmgr --verbose | grep -i -F -- "${old_partition_uuid}" | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\).*/\1/p')
+  done
+  efibootmgr --create --disk "${disk}" --part 1 --label Cuckoo --loader '\EFI\BOOT\BOOTX64.EFI'
+}
+
 if ((EUID != 0)); then
   printf 'ERROR: run this as root.\n' >&2
   exit 1
@@ -385,6 +396,9 @@ center_interface
 printf '\033[2J\033[H'
 setup_palette
 
+# Partitions of an old install on this disk
+mapfile -t old_partition_uuids < <(lsblk --noheadings --output PARTUUID -- "${disk}" | grep -v '^$')
+
 run_step 'Preparing the disk' prepare_disk
 find_partitions
 run_step 'Formatting the disk' format_disk
@@ -398,6 +412,12 @@ packages_total="$(count_target_packages)"
 run_step --progress base_system_percent 'Installing the base system' \
   setsid --wait archinstall --silent --offline --skip-ntp --skip-wkd --skip-boot --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
 run_step 'Setting up the boot' configure_boot
+
+# The computer also starts from the fallback path, so a failure only warns
+boot_entry_warning=''
+if ! run_step --may-fail 'Adding the boot entry' configure_boot_entry; then
+  boot_entry_warning='yes'
+fi
 
 # The console login shows the normal logo; the installer screen uses the big one
 if [[ -f "${logo_file}" ]]; then
@@ -529,6 +549,11 @@ fi
 if [[ -n "${drivers_warning}" ]]; then
   print_centered_line 'The video drivers were not installed.' "${color_text}"
   print_centered_line 'Run cuckoo-hardware as root after the first boot.' "${color_text}"
+  printf '\n'
+fi
+if [[ -n "${boot_entry_warning}" ]]; then
+  print_centered_line 'The boot entry was not created.' "${color_text}"
+  print_centered_line 'The computer starts from the fallback path.' "${color_text}"
   printf '\n'
 fi
 if [[ -n "${update_warning}" ]]; then
