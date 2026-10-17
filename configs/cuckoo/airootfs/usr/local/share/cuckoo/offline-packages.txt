@@ -51,7 +51,6 @@ noto-fonts-emoji
 starship
 atuin
 bash-preexec
-cage
 gtk4
 accountsservice
 glib2

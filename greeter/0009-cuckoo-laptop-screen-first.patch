@@ -1,0 +1,48 @@
+diff --git a/src/gui/model.rs b/src/gui/model.rs
+--- a/src/gui/model.rs
++++ b/src/gui/model.rs
+@@ -34,6 +34,8 @@
+ const NOTIF_CLEAR_DELAY: u64 = 5;
+ /// Time to close after a good login. It matches the fade out in the style, plus a little margin.
+ const FADE_OUT_DELAY: Duration = Duration::from_millis(350);
++/// Linux names the screen built into a laptop with one of these.
++const LAPTOP_SCREEN_NAMES: [&str; 3] = ["eDP", "LVDS", "DSI"];
+ 
+ #[derive(PartialEq)]
+ pub(super) enum InputMode {
+@@ -149,7 +151,7 @@
+         }
+     }
+ 
+-    /// Make the greeter full screen over the first monitor.
++    /// Make the greeter full screen over the laptop screen, or else the first monitor.
+     #[instrument(skip(self, sender))]
+     pub(super) fn choose_monitor(
+         &mut self,
+@@ -179,8 +181,11 @@
+                 let display_name = monitor.display().name();
+                 sender.oneshot_command(async move { CommandMsg::MonitorRemoved(display_name) })
+             });
+-            if chosen_monitor.is_none() {
+-                // Choose the first monitor.
++            let is_better_choice = match &chosen_monitor {
++                None => true,
++                Some(chosen) => is_laptop_screen(&monitor) && !is_laptop_screen(chosen),
++            };
++            if is_better_choice {
+                 chosen_monitor = Some(monitor);
+             }
+         }
+@@ -685,3 +690,12 @@
+         });
+     }
+ }
++
++/// Whether the monitor is the screen built into a laptop.
++fn is_laptop_screen(monitor: &Monitor) -> bool {
++    monitor.connector().is_some_and(|name| {
++        LAPTOP_SCREEN_NAMES
++            .iter()
++            .any(|prefix| name.starts_with(prefix))
++    })
++}

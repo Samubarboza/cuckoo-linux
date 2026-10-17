@@ -1,9 +1,10 @@
 # Tells greetd to open the Cuckoo login screen.
-# cage is a tiny compositor: the login screen needs one to draw on.
+# The login screen draws on its own Hyprland, set up in hyprland.conf.
+# No start-hyprland here: after a crash it opens a safe mode with a terminal.
 
 [terminal]
 vt = 1
 
 [default_session]
-command = "systemd-cat --identifier=greeter cage -s -- regreet"
+command = "systemd-cat --identifier=greeter Hyprland -c /etc/greetd/hyprland.conf"
 user = "greeter"
