@@ -280,8 +280,14 @@ prepare_disk() {
 }
 
 format_disk() {
+  wipefs --all -- "${esp_partition}" "${root_partition}"
   mkfs.fat -F 32 -n CUCKOO_ESP -- "${esp_partition}"
-  mkfs.btrfs -f -L CUCKOO -- "${root_partition}"
+  # printf is part of bash, so the password is not shown in the process list
+  if [[ -n "${disk_password}" ]]; then
+    printf '%s' "${disk_password}" | cryptsetup luksFormat --type luks2 --batch-mode --key-file - "${root_partition}"
+    printf '%s' "${disk_password}" | cryptsetup open --key-file - "${root_partition}" root
+  fi
+  mkfs.btrfs -f -L CUCKOO -- "${root_device}"
 }
 
 mount_disk() {
@@ -297,7 +303,7 @@ mount_disk() {
     '@containerd:/var/lib/containerd'
   )
   # Always say the file system, otherwise mount tries others first and the screen fills with errors
-  mount -t btrfs -- "${root_partition}" "${target_dir}"
+  mount -t btrfs -- "${root_device}" "${target_dir}"
   for btrfs_subvolume in "${btrfs_subvolumes[@]}"; do
     btrfs subvolume create "${target_dir}/${btrfs_subvolume%%:*}"
   done
@@ -306,7 +312,7 @@ mount_disk() {
   for btrfs_subvolume in "${btrfs_subvolumes[@]}"; do
     mount_point="${target_dir}${btrfs_subvolume#*:}"
     mkdir -p -- "${mount_point}"
-    mount -t btrfs -o "${btrfs_mount_options},subvol=${btrfs_subvolume%%:*}" -- "${root_partition}" "${mount_point}"
+    mount -t btrfs -o "${btrfs_mount_options},subvol=${btrfs_subvolume%%:*}" -- "${root_device}" "${mount_point}"
   done
   chmod 0700 -- "${target_dir}/.snapshots"
   mkdir -p -- "${target_dir}/boot"
@@ -358,16 +364,21 @@ create_machine_key() {
 
 # shim starts systemd-boot, and systemd-boot shows one boot image for each menu entry
 configure_boot() {
-  local root_uuid kernel_options
+  local root_uuid luks_uuid kernel_options
   install -Dm 644 -- "${boot_files_dir}/linux.preset" "${target_dir}/etc/mkinitcpio.d/linux.preset"
+  install -Dm 644 -- "${boot_files_dir}/mkinitcpio.conf" "${target_dir}/etc/mkinitcpio.conf.d/cuckoo.conf"
   install -Dm 644 -t "${target_dir}/etc/kernel/" -- "${boot_files_dir}"/os-release{,-safe-video,-fallback}
   install -Dm 644 -- "${boot_files_dir}/loader.conf" "${target_dir}/boot/loader/loader.conf"
   install -Dm 755 -t "${target_dir}/usr/local/bin/" -- /usr/local/bin/cuckoo-install-boot-file
   install -Dm 755 -t "${target_dir}/etc/initcpio/post/" -- "${boot_files_dir}/cuckoo-install-uki"
   install -Dm 644 -t "${target_dir}/etc/pacman.d/hooks/" -- "${boot_files_dir}/cuckoo-systemd-boot.hook"
 
-  root_uuid="$(blkid -s UUID -o value -- "${root_partition}")"
+  root_uuid="$(blkid -s UUID -o value -- "${root_device}")"
   kernel_options="root=UUID=${root_uuid} rootflags=subvol=@ rw rootfstype=btrfs zswap.enabled=0 loglevel=3 quiet splash vt.global_cursor_default=0 fbcon=nodefer"
+  if [[ -n "${disk_password}" ]]; then
+    luks_uuid="$(blkid -s UUID -o value -- "${root_partition}")"
+    kernel_options="rd.luks.name=${luks_uuid}=root ${kernel_options}"
+  fi
   printf '%s\n' "${kernel_options}" >"${target_dir}/etc/kernel/cmdline"
   printf '%s nomodeset\n' "${kernel_options}" >"${target_dir}/etc/kernel/cmdline-safe-video"
   # The root line of fstab, without its subvolume
@@ -441,14 +452,19 @@ locale="$(read_answer locale)"
 username="$(read_answer username)"
 password="$(read_answer password)"
 timezone="$(read_answer timezone)"
+disk_password=''
+if [[ -f "${answers_dir}/disk_password" ]]; then
+  disk_password="$(<"${answers_dir}/disk_password")"
+fi
 
 [[ -b "${disk}" ]] || fail "'${disk}' is not a disk."
-if findmnt --source "${disk}" &>/dev/null || findmnt "${disk}"* &>/dev/null; then
+if findmnt --source "${disk}" &>/dev/null || findmnt "${disk}"* &>/dev/null || [[ -e /dev/mapper/root ]]; then
   fail "'${disk}' is in use. Reboot and try again."
 fi
 
 esp_partition=""
 root_partition=""
+root_device=""
 
 secure_boot_on=''
 key_enrollment_code=''
@@ -456,6 +472,9 @@ if is_secure_boot_on; then
   secure_boot_on='yes'
   total_steps=$((total_steps + 1))
   key_enrollment_code="$(create_key_enrollment_code)"
+fi
+if [[ -n "${disk_password}" ]]; then
+  total_steps=$((total_steps + 1))
 fi
 
 logo=''
@@ -473,6 +492,12 @@ mapfile -t old_partition_uuids < <(lsblk --noheadings --output PARTUUID -- "${di
 
 run_step 'Preparing the disk' prepare_disk
 find_partitions
+# The system goes inside the encrypted disk, or right on the partition
+if [[ -n "${disk_password}" ]]; then
+  root_device='/dev/mapper/root'
+else
+  root_device="${root_partition}"
+fi
 run_step 'Formatting the disk' format_disk
 run_step 'Mounting the disk' mount_disk
 write_archinstall_files
@@ -575,18 +600,31 @@ if ! run_step --may-fail 'Installing the desktop' install_desktop_package; then
   desktop_warning='yes'
 fi
 
+# With the disk password asked, the desktop starts right away
+configure_disk_encryption() {
+  arch-chroot "${target_dir}" systemctl disable fstrim.timer || return 1
+  printf '%s\n' "${username}" >"${target_dir}/etc/greetd/cuckoo-autologin" || return 1
+  chmod 0644 -- "${target_dir}/etc/greetd/cuckoo-autologin"
+}
+
+# The system boots without it, so a failure only warns
+disk_encryption_warning=''
+if [[ -n "${disk_password}" ]] && ! run_step --may-fail 'Setting up the encrypted disk' configure_disk_encryption; then
+  disk_encryption_warning='yes'
+fi
+
 # The splash is cosmetic: plymouth shows the Cuckoo theme while the system boots.
 # A failure only means no splash, so it never stops the boot. The theme ships in
 # the cuckoo-desktop package, which also pulls in plymouth.
 configure_splash() {
-  local mkinitcpio_conf="${target_dir}/etc/mkinitcpio.conf"
+  local mkinitcpio_conf="${target_dir}/etc/mkinitcpio.conf.d/cuckoo.conf"
   [[ -f "${mkinitcpio_conf}" ]] || return 1
   # Only touch the initramfs if plymouth is really installed, so a failed desktop
   # step can never leave a broken initramfs and an unbootable system
   [[ -f "${target_dir}/usr/lib/initcpio/install/plymouth" ]] || return 1
-  # Add the plymouth hook right after udev, only if missing (safe to run twice)
+  # Add the plymouth hook right after systemd, only if missing (safe to run twice)
   if ! grep -q 'plymouth' "${mkinitcpio_conf}"; then
-    sed -i '/^HOOKS=/ s/\budev\b/udev plymouth/' "${mkinitcpio_conf}" || return 1
+    sed -i '/^HOOKS=/ s/\bsystemd\b/systemd plymouth/' "${mkinitcpio_conf}" || return 1
   fi
   install -d -m 0755 -- "${target_dir}/etc/plymouth" || return 1
   printf '[Daemon]\nTheme=cuckoo\n' >"${target_dir}/etc/plymouth/plymouthd.conf" || return 1
@@ -626,6 +664,9 @@ fi
 save_log_to_disk
 # The data is already on the disk, so a failed unmount only goes to the log
 umount -R -- "${target_dir}" >>"${log_file}" 2>&1 || true
+if [[ -n "${disk_password}" ]]; then
+  cryptsetup close root >>"${log_file}" 2>&1 || true
+fi
 
 # A clean screen for the last message, with the logo still centered on top
 printf '\033[2J\033[%s;1H' "${screen_top_row}"
@@ -661,6 +702,10 @@ if [[ -n "${docker_warning}" ]]; then
 fi
 if [[ -n "${splash_warning}" ]]; then
   print_centered_line 'The boot splash was not set up.' "${color_text}"
+  printf '\n'
+fi
+if [[ -n "${disk_encryption_warning}" ]]; then
+  print_centered_line 'The automatic login after the disk password was not set.' "${color_text}"
   printf '\n'
 fi
 if [[ -n "${snapshots_warning}" ]]; then

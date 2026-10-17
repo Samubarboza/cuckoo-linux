@@ -6,3 +6,4 @@ ModuleName=script
 [script]
 ImageDir=/usr/share/plymouth/themes/cuckoo
 ScriptFile=/usr/share/plymouth/themes/cuckoo/cuckoo.script
+Font=Adwaita Sans
