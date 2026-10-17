@@ -364,7 +364,7 @@ create_machine_key() {
 
 # shim starts systemd-boot, and systemd-boot shows one boot image for each menu entry
 configure_boot() {
-  local root_uuid luks_uuid kernel_options
+  local root_uuid luks_uuid luks_options kernel_options
   install -Dm 644 -- "${boot_files_dir}/linux.preset" "${target_dir}/etc/mkinitcpio.d/linux.preset"
   install -Dm 644 -- "${boot_files_dir}/mkinitcpio.conf" "${target_dir}/etc/mkinitcpio.conf.d/cuckoo.conf"
   install -Dm 644 -t "${target_dir}/etc/kernel/" -- "${boot_files_dir}"/os-release{,-safe-video,-fallback}
@@ -377,7 +377,11 @@ configure_boot() {
   kernel_options="root=UUID=${root_uuid} rootflags=subvol=@ rw rootfstype=btrfs zswap.enabled=0 loglevel=3 quiet splash vt.global_cursor_default=0 fbcon=nodefer"
   if [[ -n "${disk_password}" ]]; then
     luks_uuid="$(blkid -s UUID -o value -- "${root_partition}")"
-    kernel_options="rd.luks.name=${luks_uuid}=root ${kernel_options}"
+    luks_options="rd.luks.name=${luks_uuid}=root"
+    if [[ -n "${tpm_unlock}" ]]; then
+      luks_options+=" rd.luks.options=tpm2-device=auto"
+    fi
+    kernel_options="${luks_options} ${kernel_options}"
   fi
   printf '%s\n' "${kernel_options}" >"${target_dir}/etc/kernel/cmdline"
   printf '%s nomodeset\n' "${kernel_options}" >"${target_dir}/etc/kernel/cmdline-safe-video"
@@ -403,6 +407,10 @@ configure_boot_entry() {
     done < <(efibootmgr --verbose | grep -i -F -- "${old_partition_uuid}" | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\).*/\1/p')
   done
   efibootmgr --create --disk "${disk}" --part 1 --label Cuckoo --loader '\EFI\BOOT\BOOTX64.EFI'
+}
+
+has_tpm2() {
+  systemd-analyze has-tpm2 &>/dev/null
 }
 
 is_secure_boot_on() {
@@ -474,6 +482,12 @@ if is_secure_boot_on; then
   key_enrollment_code="$(create_key_enrollment_code)"
 fi
 if [[ -n "${disk_password}" ]]; then
+  total_steps=$((total_steps + 1))
+fi
+# The TPM opens the disk only with encryption, Secure Boot and a TPM 2.0 chip
+tpm_unlock=''
+if [[ -n "${disk_password}" && -n "${secure_boot_on}" ]] && has_tpm2; then
+  tpm_unlock='yes'
   total_steps=$((total_steps + 1))
 fi
 
@@ -600,9 +614,25 @@ if ! run_step --may-fail 'Installing the desktop' install_desktop_package; then
   desktop_warning='yes'
 fi
 
-# With the disk password asked, the desktop starts right away
+# A first start key inside the encrypted disk, and the service that connects the TPM
+prepare_tpm_unlock() {
+  local first_start_key="${target_dir}/var/lib/cuckoo/tpm-enroll.key"
+  install -d -m 0700 -- "${target_dir}/var/lib/cuckoo"
+  (umask 077 && head -c 64 /dev/urandom >"${first_start_key}")
+  printf '%s' "${disk_password}" | cryptsetup luksAddKey --key-file - "${root_partition}" "${first_start_key}"
+  install -Dm 755 -t "${target_dir}/usr/local/bin/" -- /usr/local/bin/cuckoo-tpm-enroll
+  install -Dm 644 -t "${target_dir}/etc/systemd/system/" -- "${boot_files_dir}/cuckoo-tpm-enroll.service"
+  arch-chroot "${target_dir}" systemctl enable cuckoo-tpm-enroll.service
+}
+
+if [[ -n "${tpm_unlock}" ]]; then
+  run_step 'Preparing the TPM' prepare_tpm_unlock
+fi
+
+# Without the TPM, the desktop starts right after the disk password
 configure_disk_encryption() {
   arch-chroot "${target_dir}" systemctl disable fstrim.timer || return 1
+  [[ -z "${tpm_unlock}" ]] || return 0
   printf '%s\n' "${username}" >"${target_dir}/etc/greetd/cuckoo-autologin" || return 1
   chmod 0644 -- "${target_dir}/etc/greetd/cuckoo-autologin"
 }
@@ -730,6 +760,18 @@ elif [[ -n "${secure_boot_on}" ]]; then
     print_at_center "${#key_enrollment_lines[0]}" "${color_text}${key_enrollment_line}${color_reset}"
     printf '\n'
   done
+  printf '\n'
+fi
+if [[ -n "${tpm_unlock}" ]]; then
+  print_centered_line 'The first start asks for the disk password. After that, the TPM chip opens the disk by itself.' "${color_text}"
+  print_centered_line 'Keep the disk password: it opens the disk when the TPM can not.' "${color_text}"
+  print_centered_line 'If it asks again (for example after a BIOS update), run: sudo cuckoo-tpm-enroll' "${color_text}"
+  printf '\n'
+elif [[ -n "${disk_password}" && -z "${secure_boot_on}" ]]; then
+  print_centered_line 'Secure Boot is off, so the computer asks for the disk password at each start.' "${color_text}"
+  printf '\n'
+elif [[ -n "${disk_password}" ]]; then
+  print_centered_line 'This computer has no TPM 2.0 chip, so it asks for the disk password at each start.' "${color_text}"
   printf '\n'
 fi
 
