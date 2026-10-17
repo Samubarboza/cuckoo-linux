@@ -15,12 +15,13 @@ hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
 desktop_packages_dir="/usr/local/share/cuckoo/packages"
 package_list_file="/usr/local/share/cuckoo/offline-packages.txt"
 target_mirrorlist_file="/usr/local/share/cuckoo/mirrorlist"
+docker_settings_file="/usr/local/share/cuckoo/docker-daemon.json"
 logo_file="/usr/local/share/cuckoo/logo.txt"
 logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="1GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=10
+total_steps=11
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
@@ -416,6 +417,17 @@ if ! run_step --may-fail 'Turning on the firewall' configure_firewall; then
   firewall_warning='yes'
 fi
 
+# Docker opens the container ports before the firewall, so they only listen on this computer
+configure_docker() {
+  install -Dm 644 -- "${docker_settings_file}" "${target_dir}/etc/docker/daemon.json"
+}
+
+# The system boots without it, so a failure only warns
+docker_warning=''
+if ! run_step --may-fail 'Setting up Docker' configure_docker; then
+  docker_warning='yes'
+fi
+
 # Every line says what to do when it fails: inside a step, set -e does not stop the script
 install_desktop_package() {
   pacman --root "${target_dir}" --dbpath "${target_dir}/var/lib/pacman" \
@@ -538,6 +550,10 @@ if [[ -n "${update_warning}" ]]; then
 fi
 if [[ -n "${firewall_warning}" ]]; then
   print_centered_line 'The firewall was not turned on.' "${color_text}"
+  printf '\n'
+fi
+if [[ -n "${docker_warning}" ]]; then
+  print_centered_line 'The Docker ports are open to the network.' "${color_text}"
   printf '\n'
 fi
 if [[ -n "${splash_warning}" ]]; then
