@@ -83,9 +83,9 @@ Run all commands from the repository root.
 - `./scripts/build_image.sh` — build the builder image (only when the `Dockerfile` or the GRUB patch changes)
 - `./scripts/build_iso.sh` — build the packages and the ISO into `out/`
 - `./scripts/reset_disk.sh` — empty the virtual disk
-- `./scripts/install_vm.sh` — boot the ISO with Secure Boot and install on the virtual disk
+- `./scripts/install_vm.sh` — boot the ISO with Secure Boot and a TPM and install on the virtual disk (`--no-tpm` for no TPM)
 - `./scripts/boot_vm_no_secureboot.sh` — boot the installed system without Secure Boot
-- `./scripts/boot_vm.sh` — boot the installed system with Secure Boot
+- `./scripts/boot_vm.sh` — boot the installed system with Secure Boot and a TPM (`--no-tpm` for no TPM)
 - `shfmt -w .` — format the shell scripts
 - `shfmt -f . | xargs shellcheck` — check the shell scripts
 - `./scripts/check_packages.sh` — check the PKGBUILD files (two `$startdir` errors in `desktop` are expected)

@@ -93,6 +93,7 @@ You need Docker, KVM and a Wayland session.
       ./scripts/boot_vm.sh
 
 The scripts need two files in ``vm/``: ``OVMF_VARS.fd`` and ``OVMF_VARS_sin_secureboot.fd``.
+``install_vm.sh`` and ``boot_vm.sh`` give the machine a TPM. Add ``--no-tpm`` to start it without one.
 
 Check the code
 ==============

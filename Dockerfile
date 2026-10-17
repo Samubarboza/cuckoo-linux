@@ -5,13 +5,13 @@
 FROM archlinux:latest
 
 # First line builds the iso, second line builds our GRUB, third line compiles the login
-# screen, fourth line compiles yay from the AUR, fifth line tests the iso in QEMU
+# screen, fourth line compiles yay from the AUR, fifth line tests the iso in QEMU and swtpm gives it a TPM
 RUN pacman -Syu --noconfirm --needed \
         arch-install-scripts libisoburn squashfs-tools erofs-utils dosfstools e2fsprogs mtools sbsigntools openssl \
         base-devel python \
         rust gtk4 \
         go git \
-        qemu-system-x86 qemu-ui-gtk edk2-ovmf virt-firmware \
+        qemu-system-x86 qemu-ui-gtk edk2-ovmf virt-firmware swtpm \
     && pacman -Scc --noconfirm
 
 # GRUB with the Cuckoo patch, built by the project script
