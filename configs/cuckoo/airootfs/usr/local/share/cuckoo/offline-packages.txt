@@ -6,6 +6,7 @@ base
 linux
 linux-firmware
 mkinitcpio
+sbsigntools
 zram-generator
 intel-ucode
 amd-ucode
