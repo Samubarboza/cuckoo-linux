@@ -108,6 +108,5 @@ Cuckoo Linux is a modified copy of `archiso <https://gitlab.archlinux.org/archli
 It uses GPL-3.0-or-later. See ``LICENSE``.
 ``shimx64.efi`` and ``mmx64.efi`` come from Fedora, without changes. They use a BSD license.
 The power menu icons come from `Lucide <https://lucide.dev>`_ (ISC license) and `Feather <https://feathericons.com>`_ (MIT license).
-The GRUB menu font is `Adwaita Sans <https://gitlab.gnome.org/GNOME/adwaita-fonts>`_, made into a GRUB font. It uses the SIL Open Font License.
 
 Cuckoo Linux is not an official Arch Linux or Fedora project.
