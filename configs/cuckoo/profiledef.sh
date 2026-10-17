@@ -25,6 +25,7 @@ file_permissions=(
   ["/usr/local/bin/cuckoo-install-boot-file"]="0:0:755"
   ["/usr/local/bin/cuckoo-snapshot"]="0:0:755"
   ["/usr/local/bin/cuckoo-keep-snapshot"]="0:0:755"
+  ["/usr/local/bin/cuckoo-tpm-enroll"]="0:0:755"
   ["/usr/local/share/cuckoo/boot/cuckoo-install-uki"]="0:0:755"
   ["/usr/local/share/cuckoo/hardware/"]="0:0:755"
   ["/usr/local/share/cuckoo/packages/"]="0:0:755"

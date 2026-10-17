@@ -7,6 +7,7 @@ linux
 linux-firmware
 mkinitcpio
 sbsigntools
+tpm2-tss
 zram-generator
 intel-ucode
 amd-ucode

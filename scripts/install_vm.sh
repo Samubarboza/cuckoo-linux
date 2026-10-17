@@ -22,6 +22,15 @@ fi
 
 iso_name="$(basename -- "${iso_files[0]}")"
 
+# A TPM 2.0 chip for the virtual machine. It keeps its data in vm/tpm, like a real chip.
+tpm_start=()
+tpm_options=()
+if [[ "${1:-}" != '--no-tpm' ]]; then
+  install -d -m 0700 -- "${project_dir}/vm/tpm"
+  tpm_start=(bash -c 'swtpm socket --tpm2 --tpmstate dir=/vm/tpm --ctrl type=unixio,path=/tmp/swtpm.sock --daemon && exec "$@"' _)
+  tpm_options=(-chardev 'socket,id=tpm,path=/tmp/swtpm.sock' -tpmdev 'emulator,id=tpm0,chardev=tpm' -device 'tpm-tis,tpmdev=tpm0')
+fi
+
 docker run --rm --device /dev/kvm \
   --env XDG_RUNTIME_DIR=/tmp/xdg \
   --env WAYLAND_DISPLAY="${WAYLAND_DISPLAY}" \
@@ -30,7 +39,7 @@ docker run --rm --device /dev/kvm \
   --volume "${project_dir}/vm:/vm" \
   --volume "${project_dir}/out:/out:ro" \
   cuckoo-builder \
-  qemu-system-x86_64 -enable-kvm -cpu host -m 4G \
+  "${tpm_start[@]}" qemu-system-x86_64 -enable-kvm -cpu host -m 4G \
   -machine q35,smm=on -global driver=cfi.pflash01,property=secure,value=on \
   -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd \
   -drive if=pflash,format=raw,file=/vm/OVMF_VARS.fd \
@@ -38,4 +47,5 @@ docker run --rm --device /dev/kvm \
   -device qemu-xhci -device usb-storage,drive=pendrive,bootindex=0 \
   -drive if=none,id=disco,format=raw,file=/vm/disco.img \
   -device virtio-blk-pci,drive=disco,bootindex=1 \
+  "${tpm_options[@]}" \
   -display gtk

@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Let the TPM chip open the disk at boot. It needs a TPM 2.0 chip and Secure Boot on.
+# On the first start it uses the key the installer left. Later it asks for the disk password.
+
+set -euo pipefail
+
+first_start_key="/var/lib/cuckoo/tpm-enroll.key"
+secure_boot_variable="/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
+enroll_options=(--wipe-slot=tpm2 --tpm2-device=auto --tpm2-pcrs=7)
+
+fail() {
+  printf 'ERROR: %s\n' "$1" >&2
+  exit 1
+}
+
+((EUID == 0)) || fail 'run this as root.'
+grep -q 'tpm2-device=auto' /proc/cmdline || fail 'this system was installed to always ask for the disk password.'
+systemd-analyze has-tpm2 &>/dev/null || fail 'no TPM 2.0 chip was found.'
+[[ "$(od --skip-bytes=4 --read-bytes=1 --format=u1 --address-radix=n -- "${secure_boot_variable}" 2>/dev/null)" == *1 ]] \
+  || fail 'Secure Boot is off. Turn it on in the BIOS and run this again.'
+disk_device="$(cryptsetup status root 2>/dev/null | sed -n 's/^ *device: *//p')" || disk_device=''
+[[ -b "${disk_device}" ]] || fail 'the encrypted disk was not found.'
+
+if [[ ! -f "${first_start_key}" ]]; then
+  systemd-cryptenroll "${enroll_options[@]}" "${disk_device}"
+elif cryptsetup open --test-passphrase --key-file "${first_start_key}" "${disk_device}"; then
+  systemd-cryptenroll --unlock-key-file="${first_start_key}" "${enroll_options[@]}" "${disk_device}"
+  cryptsetup luksRemoveKey --batch-mode "${disk_device}" "${first_start_key}"
+  rm -f -- "${first_start_key}"
+else
+  # A snapshot can bring back a key that was already removed from the disk
+  rm -f -- "${first_start_key}"
+  fail 'the first start key was old and was removed. Run sudo cuckoo-tpm-enroll.'
+fi
+
+printf 'Done! The disk opens by itself from the next start.\n'
