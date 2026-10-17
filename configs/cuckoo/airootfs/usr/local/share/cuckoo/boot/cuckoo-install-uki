@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# mkinitcpio runs this after each build. It puts each new boot image in its place.
+
+set -euo pipefail
+
+for built_file in "$@"; do
+  [[ "${built_file}" == *.efi.new ]] || continue
+  /usr/local/bin/cuckoo-install-boot-file "${built_file}" "${built_file%.new}"
+  rm -f -- "${built_file}"
+done

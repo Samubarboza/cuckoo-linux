@@ -1,0 +1,12 @@
+ALL_kver="/boot/vmlinuz-linux"
+PRESETS=('default' 'safe_video' 'fallback')
+
+default_uki="/boot/EFI/Linux/cuckoo.efi.new"
+default_options="--osrelease /etc/kernel/os-release"
+
+safe_video_uki="/boot/EFI/Linux/cuckoo-safe-video.efi.new"
+safe_video_cmdline="/etc/kernel/cmdline-safe-video"
+safe_video_options="--osrelease /etc/kernel/os-release-safe-video"
+
+fallback_uki="/boot/EFI/Linux/cuckoo-fallback.efi.new"
+fallback_options="-S autodetect --osrelease /etc/kernel/os-release-fallback"

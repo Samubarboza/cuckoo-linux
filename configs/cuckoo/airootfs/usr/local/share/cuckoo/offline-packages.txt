@@ -6,9 +6,8 @@ base
 linux
 linux-firmware
 mkinitcpio
+sbsigntools
 zram-generator
-grub
-efibootmgr
 intel-ucode
 amd-ucode
 btrfs-progs
