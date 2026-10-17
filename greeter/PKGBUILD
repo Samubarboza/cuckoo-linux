@@ -14,7 +14,7 @@ makedepends=('cargo')
 options=('!debug')
 provides=('greetd-regreet')
 conflicts=('greetd-regreet')
-backup=('etc/greetd/cuckoo.toml' 'etc/greetd/regreet.toml' 'etc/greetd/regreet.css')
+backup=('etc/greetd/cuckoo.toml' 'etc/greetd/regreet.toml' 'etc/greetd/regreet.css' 'etc/greetd/hyprland.conf')
 _upstream="ReGreet-${pkgver}"
 source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs/tags/${pkgver}.tar.gz"
         "0001-cuckoo-login-layout.patch"
@@ -29,9 +29,11 @@ source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs
         "cuckoo.toml"
         "regreet.toml"
         "regreet.css"
+        "hyprland.conf"
         "lock.svg"
         "greetd-override.conf")
 sha256sums=('7e26799dffdede183fc62d12aedbda5fea92d7d9802a180755d8a1d1fd93f2f7'
+            'SKIP'
             'SKIP'
             'SKIP'
             'SKIP'
@@ -68,6 +70,7 @@ package() {
     install -Dm 0644 -- "cuckoo.toml" "${pkgdir}/etc/greetd/cuckoo.toml"
     install -Dm 0644 -- "regreet.toml" "${pkgdir}/etc/greetd/regreet.toml"
     install -Dm 0644 -- "regreet.css" "${pkgdir}/etc/greetd/regreet.css"
+    install -Dm 0644 -- "hyprland.conf" "${pkgdir}/etc/greetd/hyprland.conf"
     install -Dm 0644 -- "lock.svg" "${pkgdir}/usr/share/cuckoo/lock.svg"
     install -Dm 0644 -- "greetd-override.conf" \
         "${pkgdir}/usr/lib/systemd/system/greetd.service.d/cuckoo.conf"
