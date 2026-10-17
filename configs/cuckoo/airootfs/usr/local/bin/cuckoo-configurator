@@ -203,6 +203,23 @@ ask_disk() {
   printf '%s\n' "${chosen_disk}" >"${answers_dir}/disk"
 }
 
+ask_disk_encryption() {
+  local answer
+  show_title
+  answer="$(gum choose --header 'Encrypt the disk?' 'No' 'Yes, encrypt the disk')" || cancel_install
+  if [[ "${answer}" == 'No' ]]; then
+    rm -f -- "${answers_dir}/disk_encryption"
+  else
+    printf 'yes\n' >"${answers_dir}/disk_encryption"
+  fi
+}
+
+# True when the text has only plain ASCII letters, numbers and symbols
+is_plain_text() (
+  LC_ALL=C
+  [[ "$1" =~ ^[[:print:]]+$ ]]
+)
+
 ask_user() {
   local user_name first_password second_password
   while true; do
@@ -217,12 +234,17 @@ ask_user() {
 
   while true; do
     show_title
+    if [[ -f "${answers_dir}/disk_encryption" ]]; then
+      gum style --foreground 3 'This password also opens the disk. If you forget it, nobody can open the disk and your files are lost.'
+    fi
     first_password="$(gum input --password --placeholder 'Password')" || cancel_install
     second_password="$(gum input --password --placeholder 'Repeat the password')" || cancel_install
     if [[ -z "${first_password}" ]]; then
       gum style --foreground 1 'The password can not be empty.'
     elif [[ "${first_password}" != "${second_password}" ]]; then
       gum style --foreground 1 'The passwords are not the same.'
+    elif [[ -f "${answers_dir}/disk_encryption" ]] && ! is_plain_text "${first_password}"; then
+      gum style --foreground 1 'Use only letters without accents, numbers and simple symbols.'
     else
       break
     fi
@@ -232,42 +254,6 @@ ask_user() {
   printf '%s\n' "${user_name}" >"${answers_dir}/username"
   printf '%s\n' "${first_password}" >"${answers_dir}/password"
   chmod 600 -- "${answers_dir}/password"
-}
-
-# True when the text has only plain ASCII letters, numbers and symbols
-is_plain_text() (
-  LC_ALL=C
-  [[ "$1" =~ ^[[:print:]]+$ ]]
-)
-
-ask_disk_encryption() {
-  local answer first_password second_password
-  show_title
-  answer="$(gum choose --header 'Encrypt the disk?' 'No' 'Yes, encrypt the disk')" || cancel_install
-  if [[ "${answer}" == 'No' ]]; then
-    rm -f -- "${answers_dir}/disk_password"
-    return 0
-  fi
-
-  while true; do
-    show_title
-    gum style --foreground 3 'If you forget this password, nobody can open the disk and your files are lost.'
-    first_password="$(gum input --password --placeholder 'Disk password')" || cancel_install
-    second_password="$(gum input --password --placeholder 'Repeat the disk password')" || cancel_install
-    if [[ -z "${first_password}" ]]; then
-      gum style --foreground 1 'The password can not be empty.'
-    elif [[ "${first_password}" != "${second_password}" ]]; then
-      gum style --foreground 1 'The passwords are not the same.'
-    elif ! is_plain_text "${first_password}"; then
-      gum style --foreground 1 'Use only letters without accents, numbers and simple symbols.'
-    else
-      break
-    fi
-    sleep 2
-  done
-
-  printf '%s\n' "${first_password}" >"${answers_dir}/disk_password"
-  chmod 600 -- "${answers_dir}/disk_password"
 }
 
 if ! command -v gum &>/dev/null; then
@@ -285,11 +271,11 @@ ask_keyboard
 ask_wifi
 ask_timezone
 ask_disk
-ask_user
 ask_disk_encryption
+ask_user
 
 disk_encryption='no'
-[[ -f "${answers_dir}/disk_password" ]] && disk_encryption='yes'
+[[ -f "${answers_dir}/disk_encryption" ]] && disk_encryption='yes'
 
 show_title
 gum style --border rounded --padding '0 2' --border-foreground 8 \
