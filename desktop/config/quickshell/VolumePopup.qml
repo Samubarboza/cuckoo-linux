@@ -8,6 +8,8 @@ BarPopup {
   readonly property var audio: sink ? sink.audio : null
   readonly property int level: audio ? Math.round(audio.volume * 100) : 0
   readonly property bool muted: audio ? audio.muted : false
+  // Sound outputs of the computer, not of the apps
+  readonly property var outputs: Pipewire.nodes.values.filter(node => node.isSink && !node.isStream && node.audio)
 
   implicitWidth: 260
   implicitHeight: column.implicitHeight + 26
@@ -56,11 +58,47 @@ BarPopup {
     }
 
     Text {
+      visible: root.outputs.length < 2
       anchors.left: parent.left; anchors.right: parent.right
       text: root.sink ? root.sink.description : ""
       color: Theme.subtitle; font.family: Theme.fontFamily; font.pixelSize: 11
       elide: Text.ElideRight
     }
+
+    // With more than one output, like an HDMI screen, the user picks one here
+    Column {
+      visible: root.outputs.length > 1
+      anchors.left: parent.left; anchors.right: parent.right
+      spacing: 6
+      Rectangle { width: parent.width; height: 1; color: Theme.hover }
+      Text { text: "Output"; color: Theme.soft; font.family: Theme.fontFamily; font.pixelSize: 12 }
+      Repeater {
+        model: root.outputs
+        OutputRow {}
+      }
+    }
+  }
+
+  component OutputRow: Rectangle {
+    required property var modelData
+    width: parent ? parent.width : 0
+    height: 28; radius: Theme.cornerRadius
+    color: rowHover.hovered ? Theme.hover : "transparent"
+    Text {
+      id: mark
+      anchors.left: parent.left; anchors.leftMargin: 6; anchors.verticalCenter: parent.verticalCenter
+      text: modelData === root.sink ? "●" : "○"
+      color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12
+    }
+    Text {
+      anchors.left: mark.right; anchors.leftMargin: 8; anchors.right: parent.right; anchors.rightMargin: 6
+      anchors.verticalCenter: parent.verticalCenter
+      text: modelData.description || modelData.name
+      color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12
+      elide: Text.ElideRight
+    }
+    HoverHandler { id: rowHover }
+    TapHandler { onTapped: Pipewire.preferredDefaultAudioSink = modelData }
   }
 
   component ToggleSwitch: Rectangle {
