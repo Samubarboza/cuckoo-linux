@@ -4,7 +4,7 @@
 # The version follows the ReGreet release we build from.
 pkgname=cuckoo-greeter
 pkgver=0.5.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Login screen for Cuckoo Linux"
 arch=('x86_64')
 url="https://github.com/Samubarboza/cuckoo-linux"
