@@ -13,6 +13,8 @@ log_file="${answers_dir}/install.log"
 hardware_script="/usr/local/bin/cuckoo-hardware"
 hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
 boot_files_dir="/usr/local/share/cuckoo/boot"
+machine_key_name="Cuckoo Linux Machine Key"
+machine_key_dir="/var/lib/cuckoo/secureboot"
 desktop_packages_dir="/usr/local/share/cuckoo/packages"
 package_list_file="/usr/local/share/cuckoo/offline-packages.txt"
 target_mirrorlist_file="/usr/local/share/cuckoo/mirrorlist"
@@ -22,7 +24,7 @@ logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
 esp_size="4GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=12
+total_steps=13
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
@@ -331,6 +333,17 @@ print(json.dumps({"!users": [user]}, indent=2))
   chmod 600 -- "${answers_dir}/credentials.json"
 }
 
+# The key of this computer. It signs everything that shim starts.
+create_machine_key() {
+  install -d -m 0700 -- "${target_dir}${machine_key_dir}"
+  arch-chroot "${target_dir}" openssl req -new -x509 -newkey rsa:2048 -nodes -sha256 -days 36500 \
+    -subj "/CN=${machine_key_name}/" -addext extendedKeyUsage=codeSigning \
+    -keyout "${machine_key_dir}/MOK.key" -out "${machine_key_dir}/MOK.crt"
+  chmod 0600 -- "${target_dir}${machine_key_dir}/MOK.key"
+  arch-chroot "${target_dir}" openssl x509 -in "${machine_key_dir}/MOK.crt" -outform DER -out "${machine_key_dir}/MOK.cer"
+  install -m 0644 -- "${target_dir}${machine_key_dir}/MOK.cer" "${target_dir}/boot/MOK.cer"
+}
+
 # shim starts systemd-boot, and systemd-boot shows one boot image for each menu entry
 configure_boot() {
   local root_uuid kernel_options
@@ -411,6 +424,7 @@ packages_total="$(count_target_packages)"
 # skip-boot lets archinstall install no boot loader.
 run_step --progress base_system_percent 'Installing the base system' \
   setsid --wait archinstall --silent --offline --skip-ntp --skip-wkd --skip-boot --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
+run_step 'Creating the signing key' create_machine_key
 run_step 'Setting up the boot' configure_boot
 
 # The computer also starts from the fallback path, so a failure only warns

@@ -80,7 +80,7 @@ You need Docker, KVM and a Wayland session.
 
       ./scripts/install_vm.sh
 
-6. Start the installed system. Secure Boot is off for now, because the installed system is not signed yet.
+6. Start the installed system without Secure Boot.
 
    .. code:: sh
 
