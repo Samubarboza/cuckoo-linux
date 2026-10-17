@@ -285,19 +285,31 @@ format_disk() {
 }
 
 mount_disk() {
-  local subvolume
+  local btrfs_subvolume mount_point
+  # Each subvolume and its folder. The root goes first, the others are mounted inside it.
+  local btrfs_subvolumes=(
+    '@:/'
+    '@home:/home'
+    '@log:/var/log'
+    '@pkg:/var/cache/pacman/pkg'
+    '@snapshots:/.snapshots'
+    '@docker:/var/lib/docker'
+    '@containerd:/var/lib/containerd'
+  )
   # Always say the file system, otherwise mount tries others first and the screen fills with errors
   mount -t btrfs -- "${root_partition}" "${target_dir}"
-  for subvolume in @ @home @log @pkg; do
-    btrfs subvolume create "${target_dir}/${subvolume}"
+  for btrfs_subvolume in "${btrfs_subvolumes[@]}"; do
+    btrfs subvolume create "${target_dir}/${btrfs_subvolume%%:*}"
   done
   umount -- "${target_dir}"
 
-  mount -t btrfs -o "${btrfs_mount_options},subvol=@" -- "${root_partition}" "${target_dir}"
-  mkdir -p -- "${target_dir}/home" "${target_dir}/var/log" "${target_dir}/var/cache/pacman/pkg" "${target_dir}/boot"
-  mount -t btrfs -o "${btrfs_mount_options},subvol=@home" -- "${root_partition}" "${target_dir}/home"
-  mount -t btrfs -o "${btrfs_mount_options},subvol=@log" -- "${root_partition}" "${target_dir}/var/log"
-  mount -t btrfs -o "${btrfs_mount_options},subvol=@pkg" -- "${root_partition}" "${target_dir}/var/cache/pacman/pkg"
+  for btrfs_subvolume in "${btrfs_subvolumes[@]}"; do
+    mount_point="${target_dir}${btrfs_subvolume#*:}"
+    mkdir -p -- "${mount_point}"
+    mount -t btrfs -o "${btrfs_mount_options},subvol=${btrfs_subvolume%%:*}" -- "${root_partition}" "${mount_point}"
+  done
+  chmod 0700 -- "${target_dir}/.snapshots"
+  mkdir -p -- "${target_dir}/boot"
   mount -t vfat -o fmask=0077,dmask=0077 -- "${esp_partition}" "${target_dir}/boot"
 }
 
@@ -358,6 +370,9 @@ configure_boot() {
   kernel_options="root=UUID=${root_uuid} rootflags=subvol=@ rw rootfstype=btrfs zswap.enabled=0 loglevel=3 quiet splash vt.global_cursor_default=0 fbcon=nodefer"
   printf '%s\n' "${kernel_options}" >"${target_dir}/etc/kernel/cmdline"
   printf '%s nomodeset\n' "${kernel_options}" >"${target_dir}/etc/kernel/cmdline-safe-video"
+  # The root line of fstab, without its subvolume
+  sed -E -i '/^[^#[:space:]]+[[:space:]]+\/[[:space:]]/ { s/,subvolid=[0-9]+//; s/,subvol=\/@([,[:space:]])/\1/ }' \
+    "${target_dir}/etc/fstab"
 
   rm -f -- "${target_dir}/boot/initramfs-linux.img"
   install -Dm 644 -- "${boot_files_dir}/shimx64.efi" "${target_dir}/boot/EFI/BOOT/BOOTX64.EFI"
