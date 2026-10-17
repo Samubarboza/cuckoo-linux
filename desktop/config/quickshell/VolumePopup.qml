@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Pipewire
 import QtQuick
 
@@ -10,6 +11,9 @@ BarPopup {
   readonly property bool muted: audio ? audio.muted : false
   // Sound outputs of the computer, not of the apps
   readonly property var outputs: Pipewire.nodes.values.filter(node => node.isSink && !node.isStream && node.audio)
+  // On many laptops the HDMI is hidden in the sound card, it only shows after a profile change
+  property var hiddenOutputs: []
+  readonly property var choices: outputs.map(node => ({ name: node.description || node.name, node: node })).concat(hiddenOutputs)
 
   implicitWidth: 260
   implicitHeight: column.implicitHeight + 26
@@ -58,7 +62,7 @@ BarPopup {
     }
 
     Text {
-      visible: root.outputs.length < 2
+      visible: root.choices.length < 2
       anchors.left: parent.left; anchors.right: parent.right
       text: root.sink ? root.sink.description : ""
       color: Theme.subtitle; font.family: Theme.fontFamily; font.pixelSize: 11
@@ -67,13 +71,13 @@ BarPopup {
 
     // With more than one output, like an HDMI screen, the user picks one here
     Column {
-      visible: root.outputs.length > 1
+      visible: root.choices.length > 1
       anchors.left: parent.left; anchors.right: parent.right
       spacing: 6
       Rectangle { width: parent.width; height: 1; color: Theme.hover }
       Text { text: "Output"; color: Theme.soft; font.family: Theme.fontFamily; font.pixelSize: 12 }
       Repeater {
-        model: root.outputs
+        model: root.choices
         OutputRow {}
       }
     }
@@ -87,19 +91,32 @@ BarPopup {
     Text {
       id: mark
       anchors.left: parent.left; anchors.leftMargin: 6; anchors.verticalCenter: parent.verticalCenter
-      text: modelData === root.sink ? "●" : "○"
+      text: modelData.node && modelData.node === root.sink ? "●" : "○"
       color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12
     }
     Text {
       anchors.left: mark.right; anchors.leftMargin: 8; anchors.right: parent.right; anchors.rightMargin: 6
       anchors.verticalCenter: parent.verticalCenter
-      text: modelData.description || modelData.name
+      text: modelData.name
       color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12
       elide: Text.ElideRight
     }
     HoverHandler { id: rowHover }
-    TapHandler { onTapped: Pipewire.preferredDefaultAudioSink = modelData }
+    TapHandler { onTapped: root.pickOutput(modelData) }
   }
+
+  // The sound cards with their profiles, to find the hidden outputs
+  Process {
+    id: cardsDump
+    command: ["pw-dump"]
+    stdout: StdioCollector {
+      id: cardsOut
+      onStreamFinished: root.findHiddenOutputs(cardsOut.text)
+    }
+  }
+  Process { id: profileChange }
+  onShownChanged: if (shown) cardsDump.running = true
+  onOutputsChanged: if (shown) cardsDump.running = true
 
   component ToggleSwitch: Rectangle {
     property bool active: false
@@ -117,4 +134,33 @@ BarPopup {
   }
 
   function setVol(x) { if (audio) audio.volume = Math.max(0, Math.min(1, x / track.width)); }
+
+  function pickOutput(choice) {
+    if (choice.node) {
+      Pipewire.preferredDefaultAudioSink = choice.node;
+      return;
+    }
+    profileChange.command = ["wpctl", "set-profile", String(choice.cardId), String(choice.profileIndex)];
+    profileChange.running = true;
+  }
+
+  // For each card, offer the HDMI when it is plugged in, or the way back when the HDMI is on
+  function findHiddenOutputs(text) {
+    var objects;
+    try { objects = JSON.parse(text); } catch (error) { objects = []; }
+    var found = [];
+    objects.forEach(object => {
+      var params = object.info && object.info.params;
+      if (object.type !== "PipeWire:Interface:Device" || !params || !params.EnumProfile || !params.Profile || !params.Profile.length) return;
+      var isOnHdmi = isHdmiProfile(params.Profile[0]);
+      var profiles = params.EnumProfile.filter(profile => profile.name.startsWith("output:") && isHdmiProfile(profile) !== isOnHdmi && (isOnHdmi ? profile.available !== "no" : profile.available === "yes"));
+      if (!profiles.length) return;
+      var best = profiles.reduce((first, second) => second.priority > first.priority ? second : first);
+      var cardName = object.info.props["device.description"] || object.info.props["device.name"];
+      found.push({ name: isOnHdmi ? cardName : "HDMI", cardId: object.id, profileIndex: best.index });
+    });
+    hiddenOutputs = found;
+  }
+
+  function isHdmiProfile(profile) { return profile.name.startsWith("output:hdmi"); }
 }
