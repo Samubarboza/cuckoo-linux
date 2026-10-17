@@ -7,8 +7,6 @@ linux
 linux-firmware
 mkinitcpio
 zram-generator
-grub
-efibootmgr
 intel-ucode
 amd-ucode
 btrfs-progs

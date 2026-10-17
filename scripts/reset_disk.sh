@@ -8,7 +8,7 @@ set -euo pipefail
 
 project_dir="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")/..")"
 disk_file="${project_dir}/vm/disco.img"
-disk_size="10G"
+disk_size="20G"
 
 mkdir -p -- "${project_dir}/vm"
 truncate --size 0 -- "${disk_file}"

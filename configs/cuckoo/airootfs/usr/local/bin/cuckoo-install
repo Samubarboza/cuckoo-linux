@@ -12,16 +12,17 @@ target_dir="${CUCKOO_TARGET_DIR:-/mnt}"
 log_file="${answers_dir}/install.log"
 hardware_script="/usr/local/bin/cuckoo-hardware"
 hardware_fixes_dir="/usr/local/share/cuckoo/hardware"
+boot_files_dir="/usr/local/share/cuckoo/boot"
 desktop_packages_dir="/usr/local/share/cuckoo/packages"
 package_list_file="/usr/local/share/cuckoo/offline-packages.txt"
 target_mirrorlist_file="/usr/local/share/cuckoo/mirrorlist"
 docker_settings_file="/usr/local/share/cuckoo/docker-daemon.json"
 logo_file="/usr/local/share/cuckoo/logo.txt"
 logo_big_file="/usr/local/share/cuckoo/logo-big.txt"
-esp_size="1GiB"
+esp_size="4GiB"
 btrfs_mount_options="noatime,compress=zstd"
 bar_width=26
-total_steps=11
+total_steps=12
 steps_done=0
 packages_total=0
 # Where the interface block starts. The defaults draw it at the top left, so if the screen size can not be read nothing breaks.
@@ -295,7 +296,7 @@ mount_disk() {
   mount -t btrfs -o "${btrfs_mount_options},subvol=@home" -- "${root_partition}" "${target_dir}/home"
   mount -t btrfs -o "${btrfs_mount_options},subvol=@log" -- "${root_partition}" "${target_dir}/var/log"
   mount -t btrfs -o "${btrfs_mount_options},subvol=@pkg" -- "${root_partition}" "${target_dir}/var/cache/pacman/pkg"
-  mount -t vfat -- "${esp_partition}" "${target_dir}/boot"
+  mount -t vfat -o fmask=0077,dmask=0077 -- "${esp_partition}" "${target_dir}/boot"
 }
 
 write_archinstall_files() {
@@ -306,7 +307,7 @@ write_archinstall_files() {
   cat >"${answers_dir}/archinstall.json" <<EOF
 {
   "disk_config": { "config_type": "pre_mounted_config", "mountpoint": "${target_dir}" },
-  "bootloader": "Grub",
+  "bootloader_config": { "bootloader": "No bootloader", "uki": false, "removable": false },
   "hostname": "cuckoo",
   "kernels": ["linux"],
   "locale_config": { "kb_layout": "${keymap}", "sys_lang": "${locale}", "sys_enc": "UTF-8" },
@@ -328,6 +329,41 @@ user = {"username": os.environ["CUCKOO_USERNAME"], "!password": os.environ["CUCK
 print(json.dumps({"!users": [user]}, indent=2))
 ' >"${answers_dir}/credentials.json" || fail 'the user settings could not be written.'
   chmod 600 -- "${answers_dir}/credentials.json"
+}
+
+# shim starts systemd-boot, and systemd-boot shows one boot image for each menu entry
+configure_boot() {
+  local root_uuid kernel_options
+  install -Dm 644 -- "${boot_files_dir}/linux.preset" "${target_dir}/etc/mkinitcpio.d/linux.preset"
+  install -Dm 644 -t "${target_dir}/etc/kernel/" -- "${boot_files_dir}"/os-release{,-safe-video,-fallback}
+  install -Dm 644 -- "${boot_files_dir}/loader.conf" "${target_dir}/boot/loader/loader.conf"
+  install -Dm 755 -t "${target_dir}/usr/local/bin/" -- /usr/local/bin/cuckoo-install-boot-file
+  install -Dm 755 -t "${target_dir}/etc/initcpio/post/" -- "${boot_files_dir}/cuckoo-install-uki"
+  install -Dm 644 -t "${target_dir}/etc/pacman.d/hooks/" -- "${boot_files_dir}/cuckoo-systemd-boot.hook"
+
+  root_uuid="$(blkid -s UUID -o value -- "${root_partition}")"
+  kernel_options="root=UUID=${root_uuid} rootflags=subvol=@ rw rootfstype=btrfs zswap.enabled=0 loglevel=3 quiet splash vt.global_cursor_default=0 fbcon=nodefer"
+  printf '%s\n' "${kernel_options}" >"${target_dir}/etc/kernel/cmdline"
+  printf '%s nomodeset\n' "${kernel_options}" >"${target_dir}/etc/kernel/cmdline-safe-video"
+
+  rm -f -- "${target_dir}/boot/initramfs-linux.img"
+  install -Dm 644 -- "${boot_files_dir}/shimx64.efi" "${target_dir}/boot/EFI/BOOT/BOOTX64.EFI"
+  install -m 644 -- "${boot_files_dir}/mmx64.efi" "${target_dir}/boot/EFI/BOOT/mmx64.efi"
+  arch-chroot "${target_dir}" /usr/local/bin/cuckoo-install-boot-file \
+    /usr/lib/systemd/boot/efi/systemd-bootx64.efi /boot/EFI/BOOT/grubx64.efi
+  install -d -- "${target_dir}/boot/EFI/Linux"
+  arch-chroot "${target_dir}" mkinitcpio -P
+}
+
+# One Cuckoo entry in the boot menu of the computer. Entries of other disks stay.
+configure_boot_entry() {
+  local old_partition_uuid boot_number
+  for old_partition_uuid in "${old_partition_uuids[@]}"; do
+    while read -r boot_number; do
+      efibootmgr --quiet --delete-bootnum --bootnum "${boot_number}" || return 1
+    done < <(efibootmgr --verbose | grep -i -F -- "${old_partition_uuid}" | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\).*/\1/p')
+  done
+  efibootmgr --create --disk "${disk}" --part 1 --label Cuckoo --loader '\EFI\BOOT\BOOTX64.EFI'
 }
 
 if ((EUID != 0)); then
@@ -360,6 +396,9 @@ center_interface
 printf '\033[2J\033[H'
 setup_palette
 
+# Partitions of an old install on this disk
+mapfile -t old_partition_uuids < <(lsblk --noheadings --output PARTUUID -- "${disk}" | grep -v '^$')
+
 run_step 'Preparing the disk' prepare_disk
 find_partitions
 run_step 'Formatting the disk' format_disk
@@ -369,8 +408,16 @@ packages_total="$(count_target_packages)"
 # setsid leaves archinstall without a terminal, so it writes in the log and not on our screen.
 # offline skips the internet check: without it archinstall asks for Wi-Fi on a screen nobody sees and waits forever.
 # skip-ntp and skip-wkd avoid two waits that need internet, so an offline install never hangs.
+# skip-boot lets archinstall install no boot loader.
 run_step --progress base_system_percent 'Installing the base system' \
-  setsid --wait archinstall --silent --offline --skip-ntp --skip-wkd --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
+  setsid --wait archinstall --silent --offline --skip-ntp --skip-wkd --skip-boot --config "${answers_dir}/archinstall.json" --creds "${answers_dir}/credentials.json"
+run_step 'Setting up the boot' configure_boot
+
+# The computer also starts from the fallback path, so a failure only warns
+boot_entry_warning=''
+if ! run_step --may-fail 'Adding the boot entry' configure_boot_entry; then
+  boot_entry_warning='yes'
+fi
 
 # The console login shows the normal logo; the installer screen uses the big one
 if [[ -f "${logo_file}" ]]; then
@@ -449,42 +496,6 @@ if ! run_step --may-fail 'Installing the desktop' install_desktop_package; then
   desktop_warning='yes'
 fi
 
-# Change a GRUB setting, or add it when the file does not have it yet
-set_grub_setting() {
-  local grub_defaults="$1" name="$2" value="$3"
-  if grep -q "^${name}=" "${grub_defaults}"; then
-    # The theme value is a path, so | splits the parts instead of /
-    sed -i "s|^${name}=.*|${name}=${value}|" "${grub_defaults}"
-  else
-    printf '%s=%s\n' "${name}" "${value}" >>"${grub_defaults}"
-  fi
-}
-
-# Runs after the desktop: the GRUB theme comes in that package.
-# fbcon=nodefer clears the GRUB text. A failed grub-mkconfig never breaks the boot.
-configure_grub() {
-  local grub_defaults="${target_dir}/etc/default/grub"
-  local options=(vt.global_cursor_default=0 quiet splash fbcon=nodefer)
-  local option
-  [[ -f "${grub_defaults}" ]] || return 1
-  # Add each option only if it is missing, so running the installer twice is safe
-  for option in "${options[@]}"; do
-    grep -qF -- "${option}" "${grub_defaults}" && continue
-    sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 ${option}\"/" "${grub_defaults}" || return 1
-  done
-  set_grub_setting "${grub_defaults}" GRUB_DISTRIBUTOR '"Cuckoo"' || return 1
-  set_grub_setting "${grub_defaults}" GRUB_DISABLE_BOOTNEXT true || return 1
-  set_grub_setting "${grub_defaults}" GRUB_TIMEOUT 5 || return 1
-  set_grub_setting "${grub_defaults}" GRUB_THEME '"/usr/share/grub/themes/cuckoo/theme.txt"' || return 1
-  arch-chroot "${target_dir}" grub-mkconfig -o /boot/grub/grub.cfg
-}
-
-# These settings are polish, not needed to boot, so a failure only warns
-boot_warning=''
-if ! run_step --may-fail 'Setting up the boot' configure_grub; then
-  boot_warning='yes'
-fi
-
 # The splash is cosmetic: plymouth shows the Cuckoo theme while the system boots.
 # A failure only means no splash, so it never stops the boot. The theme ships in
 # the cuckoo-desktop package, which also pulls in plymouth.
@@ -540,8 +551,9 @@ if [[ -n "${drivers_warning}" ]]; then
   print_centered_line 'Run cuckoo-hardware as root after the first boot.' "${color_text}"
   printf '\n'
 fi
-if [[ -n "${boot_warning}" ]]; then
-  print_centered_line 'The boot options were not fully set.' "${color_text}"
+if [[ -n "${boot_entry_warning}" ]]; then
+  print_centered_line 'The boot entry was not created.' "${color_text}"
+  print_centered_line 'The computer starts from the fallback path.' "${color_text}"
   printf '\n'
 fi
 if [[ -n "${update_warning}" ]]; then

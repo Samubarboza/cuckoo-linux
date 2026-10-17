@@ -1,0 +1,10 @@
+[Trigger]
+Type = Path
+Operation = Install
+Operation = Upgrade
+Target = usr/lib/systemd/boot/efi/systemd-bootx64.efi
+
+[Action]
+Description = Updating systemd-boot in the boot partition...
+When = PostTransaction
+Exec = /usr/local/bin/cuckoo-install-boot-file /usr/lib/systemd/boot/efi/systemd-bootx64.efi /boot/EFI/BOOT/grubx64.efi
