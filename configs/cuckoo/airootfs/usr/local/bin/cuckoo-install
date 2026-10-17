@@ -379,6 +379,42 @@ configure_boot_entry() {
   efibootmgr --create --disk "${disk}" --part 1 --label Cuckoo --loader '\EFI\BOOT\BOOTX64.EFI'
 }
 
+is_secure_boot_on() {
+  mokutil --sb-state 2>/dev/null | grep -q 'SecureBoot enabled'
+}
+
+# 8 letters that sit in the same place on QWERTY, AZERTY and QWERTZ keyboards
+create_key_enrollment_code() {
+  local code_letters='bcdefghjknprstuvx' enrollment_code='' letter_number
+  for ((letter_number = 0; letter_number < 8; letter_number++)); do
+    enrollment_code+="${code_letters:SRANDOM%${#code_letters}:1}"
+  done
+  printf '%s' "${enrollment_code}"
+}
+
+# Ask the blue screen to trust the key of this computer and to remove the keys of old installs
+request_key_enrollment() {
+  local temporary_dir hash_file exported_key old_keys=()
+  mokutil --revoke-import &>/dev/null || true
+  mokutil --revoke-delete &>/dev/null || true
+  temporary_dir="$(mktemp -d -p "${answers_dir}")" || return 1
+  trap 'rm -rf -- "${temporary_dir}"' EXIT
+
+  (cd -- "${temporary_dir}" && mokutil --export) || true
+  for exported_key in "${temporary_dir}"/*.der; do
+    if [[ "$(openssl x509 -inform DER -in "${exported_key}" -noout -subject 2>/dev/null)" == "subject=CN=${machine_key_name}" ]]; then
+      old_keys+=("${exported_key}")
+    fi
+  done
+
+  hash_file="${temporary_dir}/password-hash"
+  (umask 077 && printf '%s\n' "${key_enrollment_code}" | openssl passwd -6 -stdin >"${hash_file}") || return 1
+  mokutil --import "${target_dir}${machine_key_dir}/MOK.cer" --hash-file "${hash_file}" || return 1
+  if ((${#old_keys[@]} > 0)); then
+    mokutil --delete "${old_keys[@]}" --hash-file "${hash_file}" || return 1
+  fi
+}
+
 if ((EUID != 0)); then
   printf 'ERROR: run this as root.\n' >&2
   exit 1
@@ -398,6 +434,14 @@ fi
 
 esp_partition=""
 root_partition=""
+
+secure_boot_on=''
+key_enrollment_code=''
+if is_secure_boot_on; then
+  secure_boot_on='yes'
+  total_steps=$((total_steps + 1))
+  key_enrollment_code="$(create_key_enrollment_code)"
+fi
 
 logo=''
 [[ -f "${logo_big_file}" ]] && logo="$(<"${logo_big_file}")"
@@ -431,6 +475,12 @@ run_step 'Setting up the boot' configure_boot
 boot_entry_warning=''
 if ! run_step --may-fail 'Adding the boot entry' configure_boot_entry; then
   boot_entry_warning='yes'
+fi
+
+# The key also loads from the disk, so a failure only warns
+key_enrollment_warning=''
+if [[ -n "${secure_boot_on}" ]] && ! run_step --may-fail 'Preparing the Secure Boot key' request_key_enrollment; then
+  key_enrollment_warning='yes'
 fi
 
 # The console login shows the normal logo; the installer screen uses the big one
@@ -584,6 +634,26 @@ if [[ -n "${docker_warning}" ]]; then
 fi
 if [[ -n "${splash_warning}" ]]; then
   print_centered_line 'The boot splash was not set up.' "${color_text}"
+  printf '\n'
+fi
+if [[ -n "${secure_boot_on}" && -n "${key_enrollment_warning}" ]]; then
+  print_centered_line 'Secure Boot is on, but the key could not be prepared.' "${color_text}"
+  print_centered_line 'After the reboot, choose Enroll key from disk and pick MOK.cer.' "${color_text}"
+  printf '\n'
+elif [[ -n "${secure_boot_on}" ]]; then
+  # The blue screen steps, in a centered block
+  key_enrollment_lines=(
+    'Secure Boot is on. After the reboot, a blue screen asks to trust this computer:'
+    '1. Press any key.'
+    '2. Choose Enroll MOK, then Continue and Yes.'
+    "3. Type this code: ${key_enrollment_code}"
+    '4. If it shows Delete MOK, do the same with the same code.'
+    '5. Choose Reboot.'
+  )
+  for key_enrollment_line in "${key_enrollment_lines[@]}"; do
+    print_at_center "${#key_enrollment_lines[0]}" "${color_text}${key_enrollment_line}${color_reset}"
+    printf '\n'
+  done
   printf '\n'
 fi
 
