@@ -1,0 +1,11 @@
+[Unit]
+Description=Let the TPM open the disk from the next start
+ConditionPathExists=/var/lib/cuckoo/tpm-enroll.key
+After=tpm2.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cuckoo-tpm-enroll
+
+[Install]
+WantedBy=multi-user.target
