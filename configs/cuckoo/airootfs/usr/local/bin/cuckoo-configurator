@@ -235,7 +235,7 @@ ask_user() {
   while true; do
     show_title
     if [[ -f "${answers_dir}/disk_encryption" ]]; then
-      gum style --foreground 3 'This password also opens the disk. If you forget it, nobody can open the disk and your files are lost.'
+      gum style --foreground 3 'This password also opens the disk. Keep the recovery key shown at the end of the install.'
     fi
     first_password="$(gum input --password --placeholder 'Password')" || cancel_install
     second_password="$(gum input --password --placeholder 'Repeat the password')" || cancel_install
