@@ -324,7 +324,7 @@ EOF
   # The values go in the environment, so they are not shown in the process list.
   CUCKOO_USERNAME="${username}" CUCKOO_PASSWORD="${password}" python3 -c '
 import json, os
-user = {"username": os.environ["CUCKOO_USERNAME"], "!password": os.environ["CUCKOO_PASSWORD"], "sudo": True, "groups": ["docker"]}
+user = {"username": os.environ["CUCKOO_USERNAME"], "!password": os.environ["CUCKOO_PASSWORD"], "sudo": True}
 print(json.dumps({"!users": [user]}, indent=2))
 ' >"${answers_dir}/credentials.json" || fail 'the user settings could not be written.'
   chmod 600 -- "${answers_dir}/credentials.json"
