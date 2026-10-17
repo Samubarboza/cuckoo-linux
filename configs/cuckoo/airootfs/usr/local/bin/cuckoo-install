@@ -374,7 +374,7 @@ configure_boot() {
   install -Dm 644 -t "${target_dir}/etc/pacman.d/hooks/" -- "${boot_files_dir}/cuckoo-systemd-boot.hook"
 
   root_uuid="$(blkid -s UUID -o value -- "${root_device}")"
-  kernel_options="root=UUID=${root_uuid} rootflags=subvol=@ rw rootfstype=btrfs zswap.enabled=0 loglevel=3 quiet splash vt.global_cursor_default=0 fbcon=nodefer"
+  kernel_options="root=UUID=${root_uuid} rootflags=subvol=@ rw rootfstype=btrfs zswap.enabled=0 loglevel=3 quiet splash plymouth.ignore-serial-consoles vt.global_cursor_default=0 fbcon=nodefer"
   if [[ -n "${disk_password}" ]]; then
     luks_uuid="$(blkid -s UUID -o value -- "${root_partition}")"
     luks_options="rd.luks.name=${luks_uuid}=root"

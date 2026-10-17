@@ -26,7 +26,7 @@ if [[ "${1:-}" != '--no-tpm' ]]; then
   tpm_options=(-chardev 'socket,id=tpm,path=/tmp/swtpm.sock' -tpmdev 'emulator,id=tpm0,chardev=tpm' -device 'tpm-tis,tpmdev=tpm0')
 fi
 
-docker run --rm --device /dev/kvm \
+docker run --rm -it --device /dev/kvm \
   --env XDG_RUNTIME_DIR=/tmp/xdg \
   --env WAYLAND_DISPLAY="${WAYLAND_DISPLAY}" \
   --env GDK_BACKEND=wayland \
@@ -39,4 +39,5 @@ docker run --rm --device /dev/kvm \
   -drive if=pflash,format=raw,file=/vm/OVMF_VARS.fd \
   -drive if=virtio,format=raw,file=/vm/disco.img \
   "${tpm_options[@]}" \
-  -display gtk
+  -display gtk \
+  -monitor stdio
