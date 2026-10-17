@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Keep the started snapshot as the system. The home folder and Docker data are not touched.
+
+set -euo pipefail
+
+fail() {
+  printf 'ERROR: %s\n' "$1" >&2
+  exit 1
+}
+
+((EUID == 0)) || fail 'run this as root.'
+root_subvolume="$(findmnt -no FSROOT /)"
+[[ "${root_subvolume}" == /@snapshots/* ]] || fail 'start the snapshot from the boot menu first, then run this again.'
+snapshot_id="${root_subvolume#/@snapshots/}"
+
+read -r -p "This replaces the system with the snapshot ${snapshot_id}. Your home folder and Docker data are not touched. Type yes to go on: " confirmation
+if [[ "${confirmation}" != 'yes' ]]; then
+  printf 'Nothing was changed.\n'
+  exit 0
+fi
+
+btrfs_top_dir="$(mktemp -d)"
+trap 'mountpoint -q "${btrfs_top_dir}" && umount -- "${btrfs_top_dir}"; rmdir -- "${btrfs_top_dir}"' EXIT
+mount -t btrfs -o subvolid=5 "UUID=$(findmnt -no UUID /)" "${btrfs_top_dir}"
+
+for leftover_subvolume in "${btrfs_top_dir}/@.new" "${btrfs_top_dir}/@.old"; do
+  if [[ -d "${leftover_subvolume}" ]]; then
+    btrfs subvolume delete --recursive "${leftover_subvolume}"
+  fi
+done
+
+btrfs subvolume snapshot "${btrfs_top_dir}/@snapshots/${snapshot_id}" "${btrfs_top_dir}/@.new"
+mv -- "${btrfs_top_dir}/@" "${btrfs_top_dir}/@.old"
+mv -- "${btrfs_top_dir}/@.new" "${btrfs_top_dir}/@"
+btrfs subvolume delete --recursive "${btrfs_top_dir}/@.old"
+
+install -m 0644 -- "/usr/lib/modules/$(uname -r)/vmlinuz" /boot/vmlinuz-linux
+if ! mkinitcpio -P; then
+  fail 'the boot images could not be rebuilt. Run: sudo mkinitcpio -P'
+fi
+printf 'Done! Restart the computer to use it.\n'

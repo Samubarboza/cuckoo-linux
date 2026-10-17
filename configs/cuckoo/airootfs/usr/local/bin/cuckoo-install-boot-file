@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Sign an EFI file with the key of this computer and put it in the boot partition. The old file stays until the new one is signed.
+
+set -euo pipefail
+
+source_file="$1"
+boot_file="$2"
+temporary_file="${boot_file}.tmp"
+key_dir="/var/lib/cuckoo/secureboot"
+trap 'rm -f -- "${temporary_file}"' EXIT
+
+if ! sbsign --key "${key_dir}/MOK.key" --cert "${key_dir}/MOK.crt" --output "${temporary_file}" "${source_file}" \
+  || ! sbverify --cert "${key_dir}/MOK.crt" "${temporary_file}"; then
+  printf "ERROR: '%s' could not be signed. The last signed version stays.\n" "${boot_file}" >&2
+  exit 1
+fi
+mv -f -- "${temporary_file}" "${boot_file}"

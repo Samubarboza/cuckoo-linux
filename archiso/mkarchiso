@@ -894,6 +894,9 @@ _make_bootmode_uefi.shim-grub() {
     install -d -m 0755 -- "${isofs_dir}/EFI/BOOT"
     install -m 0644 -- "${profile}/secureboot/shimx64.efi" "${isofs_dir}/EFI/BOOT/BOOTX64.EFI"
     install -m 0644 -- "${profile}/secureboot/mmx64.efi" "${isofs_dir}/EFI/BOOT/"
+    # The installer puts the same shim on the installed system
+    install -D -m 0644 -t "${pacstrap_dir}/usr/local/share/cuckoo/boot/" -- \
+        "${profile}/secureboot/shimx64.efi" "${profile}/secureboot/mmx64.efi"
     if ! sign_output="$(sbsign --key "${secureboot_key_dir}/MOK.key" --cert "${secureboot_key_dir}/MOK.crt" \
         --output "${isofs_dir}/EFI/BOOT/grubx64.efi" "${work_dir}/grubx64.efi" 2>&1)"; then
         _msg_error "Could not sign GRUB: ${sign_output}" 1
