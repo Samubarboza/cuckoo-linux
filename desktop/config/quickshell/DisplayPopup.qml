@@ -2,7 +2,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// One row per screen with 4 scales that fit its resolution. A click applies the scale at once and saves it in monitors.conf.
+// One row per screen with a bar of the scales that fit its resolution. A click applies the scale at once and saves it in monitors.conf.
 BarPopup {
   id: root
   property var screens: []
@@ -19,9 +19,7 @@ BarPopup {
     id: column
     anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
     anchors.leftMargin: 14; anchors.rightMargin: 14; anchors.topMargin: 12
-    spacing: 12
-
-    Text { text: "Scale"; font.family: Theme.fontFamily; font.pixelSize: 11; color: Theme.subtitle }
+    spacing: 14
 
     Repeater {
       model: root.screens
@@ -30,32 +28,46 @@ BarPopup {
         required property var modelData
         width: column.width
         spacing: 8
-        Text { width: parent.width; text: modelData.label; elide: Text.ElideRight; font.family: Theme.fontFamily; font.pixelSize: 13; font.weight: Font.DemiBold; color: Theme.text }
-        Flow {
+        Row {
           width: parent.width
-          spacing: 6
-          Repeater {
-            model: root.exactScales(modelData.width, modelData.height)
-            ScaleButton { required property int modelData; scaleParts: modelData; targetScreen: screenRow.modelData }
+          spacing: 8
+          Text { id: screenIcon; anchors.verticalCenter: parent.verticalCenter; text: String.fromCodePoint(0xf0379); font.family: Theme.iconFont; font.pixelSize: 15; color: Theme.text }
+          Text { anchors.verticalCenter: parent.verticalCenter; width: parent.width - screenIcon.width - parent.spacing; text: screenRow.modelData.label; elide: Text.ElideRight; font.family: Theme.fontFamily; font.pixelSize: 13; font.weight: Font.DemiBold; color: Theme.text }
+        }
+        Rectangle {
+          id: scaleBar
+          width: parent.width; height: 30; radius: Theme.cornerRadius
+          color: "transparent"; border.width: 1; border.color: Theme.glass
+          Row {
+            anchors.fill: parent
+            Repeater {
+              id: scaleBarParts
+              model: root.exactScales(screenRow.modelData.width, screenRow.modelData.height)
+              ScalePart { required property int modelData; required property int index; scaleParts: modelData; targetScreen: screenRow.modelData; showLine: index > 0; width: scaleBar.width / scaleBarParts.count; height: scaleBar.height }
+            }
           }
         }
       }
     }
   }
 
-  component ScaleButton: Rectangle {
+  // One part of the bar. The chosen one is filled, and a thin line splits it from the one before.
+  component ScalePart: Item {
     property int scaleParts: 120
     property var targetScreen: null
+    property bool showLine: false
     readonly property bool current: targetScreen && Math.round(targetScreen.scale * 120) === scaleParts
-    width: label.implicitWidth + 16; height: 24; radius: Theme.cornerRadius
-    color: current ? Theme.glass : hover.hovered ? Theme.hover : "transparent"
-    Text { id: label; anchors.centerIn: parent; text: Math.round(scaleParts * 100 / 120) + "%"; font.family: Theme.fontFamily; font.pixelSize: 12; font.weight: Font.DemiBold; color: current ? Theme.text : Theme.soft }
+    Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: 1; height: parent.height - 12; color: Theme.hover; visible: showLine }
+    Rectangle { anchors.fill: parent; anchors.margins: 3; radius: Theme.cornerRadius - 3; color: current ? Theme.glass : hover.hovered ? Theme.hover : "transparent" }
+    Text { anchors.centerIn: parent; text: Math.round(scaleParts * 100 / 120) + "%"; font.family: Theme.fontFamily; font.pixelSize: 12; font.weight: Font.DemiBold; color: current ? Theme.text : Theme.soft }
     HoverHandler { id: hover }
     TapHandler { onTapped: root.applyScale(targetScreen, scaleParts) }
   }
 
   Process { id: readProc; command: ["hyprctl", "-j", "monitors"]; stdout: StdioCollector { id: rout; onStreamFinished: root.readScreens(rout.text) } }
   Process { id: applyProc; onExited: readProc.running = true }
+  // A screen plugged in or out while the popup is open shows at once
+  Connections { target: Quickshell; function onScreensChanged() { if (root.shown) readProc.running = true; } }
   FileView { id: monitorsFile; path: Quickshell.env("HOME") + "/.config/hypr/monitors.conf"; blockLoading: true; watchChanges: true; onFileChanged: reload() }
 
   function readScreens(text) {
@@ -63,7 +75,8 @@ BarPopup {
     try { monitors = JSON.parse(text); } catch (error) { return; }
     screens = monitors.map(function (monitor) {
       var rule = monitor.description ? "desc:" + monitor.description : monitor.name;
-      return { rule: rule, label: monitor.description || monitor.name, width: monitor.width, height: monitor.height, scale: monitor.scale };
+      var label = [monitor.make, monitor.model].join(" ").trim() || monitor.description || monitor.name;
+      return { rule: rule, label: label, width: monitor.width, height: monitor.height, scale: monitor.scale };
     });
   }
   // For each wanted scale, the closest exact one. Two that end on the same scale show once.
