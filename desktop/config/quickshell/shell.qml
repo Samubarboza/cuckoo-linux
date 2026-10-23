@@ -36,7 +36,8 @@ ShellRoot {
 
       Row {
         id: centerZone
-        anchors.horizontalCenter: parent.horizontalCenter
+        // Centered, and moves to the left when the right zone needs the space
+        x: Math.min((parent.width - width) / 2, rightZone.x - width - 8)
         anchors.verticalCenter: parent.verticalCenter
         Workspaces { screen: modelData }
       }
