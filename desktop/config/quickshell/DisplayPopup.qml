@@ -2,7 +2,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// One row per screen with the scales that fit its resolution. A click applies the scale at once.
+// One row per screen with the scales that fit its resolution. A click applies the scale at once and saves it in monitors.conf.
 BarPopup {
   id: root
   property var screens: []
@@ -52,6 +52,7 @@ BarPopup {
 
   Process { id: readProc; command: ["hyprctl", "-j", "monitors"]; stdout: StdioCollector { id: rout; onStreamFinished: root.readScreens(rout.text) } }
   Process { id: applyProc; onExited: readProc.running = true }
+  FileView { id: monitorsFile; path: Quickshell.env("HOME") + "/.config/hypr/monitors.conf"; blockLoading: true; watchChanges: true; onFileChanged: reload() }
 
   function readScreens(text) {
     var monitors = [];
@@ -72,5 +73,14 @@ BarPopup {
     if (applyProc.running) return;
     applyProc.command = ["hyprctl", "keyword", "monitor", screen.rule + ", preferred, auto, " + twentieths / 20];
     applyProc.running = true;
+    saveScale(screen.rule, twentieths / 20);
+  }
+  // Replace the line of this screen and keep every other line as it is
+  function saveScale(rule, scale) {
+    var keptLines = monitorsFile.text().split("\n").filter(function (savedLine) {
+      return savedLine !== "" && savedLine.indexOf("monitor = " + rule + ",") !== 0;
+    });
+    keptLines.push("monitor = " + rule + ", preferred, auto, " + scale);
+    monitorsFile.setText(keptLines.join("\n") + "\n");
   }
 }
