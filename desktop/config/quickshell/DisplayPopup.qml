@@ -2,10 +2,14 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// One row per screen with the scales that fit its resolution. A click applies the scale at once and saves it in monitors.conf.
+// One row per screen with 4 scales that fit its resolution. A click applies the scale at once and saves it in monitors.conf.
 BarPopup {
   id: root
   property var screens: []
+  // Scales in parts of 120, the same way Hyprland and Wayland count them: 83%, 100%, 125% and 150%
+  readonly property var wantedScales: [100, 120, 150, 180]
+  // An exact scale shows only when it is at most 10% away from the wanted one
+  readonly property int maxScaleDistance: 12
 
   implicitWidth: 300
   implicitHeight: column.implicitHeight + 26
@@ -31,8 +35,8 @@ BarPopup {
           width: parent.width
           spacing: 6
           Repeater {
-            model: root.scalesThatFit(modelData.width, modelData.height)
-            ScaleButton { required property int modelData; twentieths: modelData; targetScreen: screenRow.modelData }
+            model: root.exactScales(modelData.width, modelData.height)
+            ScaleButton { required property int modelData; scaleParts: modelData; targetScreen: screenRow.modelData }
           }
         }
       }
@@ -40,14 +44,14 @@ BarPopup {
   }
 
   component ScaleButton: Rectangle {
-    property int twentieths: 20
+    property int scaleParts: 120
     property var targetScreen: null
-    readonly property bool current: targetScreen && Math.round(targetScreen.scale * 20) === twentieths
+    readonly property bool current: targetScreen && Math.round(targetScreen.scale * 120) === scaleParts
     width: label.implicitWidth + 16; height: 24; radius: Theme.cornerRadius
     color: current ? Theme.glass : hover.hovered ? Theme.hover : "transparent"
-    Text { id: label; anchors.centerIn: parent; text: twentieths * 5 + "%"; font.family: Theme.fontFamily; font.pixelSize: 12; font.weight: Font.DemiBold; color: current ? Theme.text : Theme.soft }
+    Text { id: label; anchors.centerIn: parent; text: Math.round(scaleParts * 100 / 120) + "%"; font.family: Theme.fontFamily; font.pixelSize: 12; font.weight: Font.DemiBold; color: current ? Theme.text : Theme.soft }
     HoverHandler { id: hover }
-    TapHandler { onTapped: root.applyScale(targetScreen, twentieths) }
+    TapHandler { onTapped: root.applyScale(targetScreen, scaleParts) }
   }
 
   Process { id: readProc; command: ["hyprctl", "-j", "monitors"]; stdout: StdioCollector { id: rout; onStreamFinished: root.readScreens(rout.text) } }
@@ -62,18 +66,35 @@ BarPopup {
       return { rule: rule, label: monitor.description || monitor.name, width: monitor.width, height: monitor.height, scale: monitor.scale };
     });
   }
-  // Scales from 1 to 2, in steps of 0.05, that divide the width and the height exactly. Counted in twentieths to stay whole numbers.
-  function scalesThatFit(width, height) {
-    var fitting = [];
-    for (var twentieths = 20; twentieths <= 40; twentieths++)
-      if ((width * 20) % twentieths === 0 && (height * 20) % twentieths === 0) fitting.push(twentieths);
-    return fitting;
+  // For each wanted scale, the closest exact one. Two that end on the same scale show once.
+  function exactScales(width, height) {
+    var exact = [];
+    wantedScales.forEach(function (wanted) {
+      var closest = closestExactScale(width, height, wanted);
+      if (closest > 0 && exact.indexOf(closest) === -1) exact.push(closest);
+    });
+    return exact;
   }
-  function applyScale(screen, twentieths) {
+  // 0 when no exact scale is close enough. On a tie, the smaller scale wins.
+  function closestExactScale(width, height, wanted) {
+    for (var distance = 0; distance <= maxScaleDistance; distance++) {
+      if (isExactScale(width, height, wanted - distance)) return wanted - distance;
+      if (isExactScale(width, height, wanted + distance)) return wanted + distance;
+    }
+    return 0;
+  }
+  // Exact when the width and the height divide into whole pixels, so the screen stays sharp
+  function isExactScale(width, height, scaleParts) {
+    return (width * 120) % scaleParts === 0 && (height * 120) % scaleParts === 0;
+  }
+  function scaleValue(scaleParts) {
+    return Number((scaleParts / 120).toFixed(6));
+  }
+  function applyScale(screen, scaleParts) {
     if (applyProc.running) return;
-    applyProc.command = ["hyprctl", "keyword", "monitor", screen.rule + ", preferred, auto, " + twentieths / 20];
+    applyProc.command = ["hyprctl", "keyword", "monitor", screen.rule + ", preferred, auto, " + scaleValue(scaleParts)];
     applyProc.running = true;
-    saveScale(screen.rule, twentieths / 20);
+    saveScale(screen.rule, scaleValue(scaleParts));
   }
   // Replace the line of this screen and keep every other line as it is
   function saveScale(rule, scale) {
