@@ -50,7 +50,7 @@ ShellRoot {
         Weather {}
         Network { id: network; onClicked: { var p = network.mapToItem(null, 0, 0); wifiPopup.anchorX = Math.max(4, p.x + network.width - wifiPopup.implicitWidth); wifiPopup.toggle(); } }
         Volume { id: volume; onClicked: { var p = volume.mapToItem(null, 0, 0); volumePopup.anchorX = Math.max(4, p.x + volume.width - volumePopup.implicitWidth); volumePopup.toggle(); } }
-        Display { id: display; onClicked: { var p = display.mapToItem(null, 0, 0); displayPopup.anchorX = Math.max(4, p.x + display.width - displayPopup.implicitWidth); displayPopup.toggle(); } }
+        Display { id: display; onClicked: displayPopup.toggle() }
         Brightness { id: brightness; onClicked: { var p = brightness.mapToItem(null, 0, 0); brightnessPopup.anchorX = Math.max(4, p.x + brightness.width - brightnessPopup.implicitWidth); brightnessPopup.toggle(); } }
         Control { id: control; onClicked: { var p = control.mapToItem(null, 0, 0); systemPopup.anchorX = Math.max(4, p.x + control.width - systemPopup.implicitWidth); systemPopup.toggle(); } }
         Battery { id: battery; onClicked: { var p = battery.mapToItem(null, 0, 0); batteryPopup.anchorX = Math.max(4, p.x + battery.width - batteryPopup.implicitWidth); batteryPopup.toggle(); } }
@@ -61,7 +61,8 @@ ShellRoot {
       SystemPopup { id: systemPopup; barWindow: bar }
       WifiPopup { id: wifiPopup; barWindow: bar }
       VolumePopup { id: volumePopup; barWindow: bar }
-      DisplayPopup { id: displayPopup; barWindow: bar }
+      // Follows the icon, because a new scale moves it
+      DisplayPopup { id: displayPopup; barWindow: bar; anchorX: Math.max(4, rightZone.x + display.x + display.width - implicitWidth) }
       BrightnessPopup { id: brightnessPopup; barWindow: bar }
       AppsPopup { id: appsPopup; barWindow: bar }
       BatteryPopup { id: batteryPopup; barWindow: bar }

@@ -65,7 +65,8 @@ BarPopup {
   }
 
   Process { id: readProc; command: ["hyprctl", "-j", "monitors"]; stdout: StdioCollector { id: rout; onStreamFinished: root.readScreens(rout.text) } }
-  Process { id: applyProc; onExited: readProc.running = true }
+  // Hyprland changes the scale a moment after it answers, so only an error reads the screens again
+  Process { id: applyProc; stdout: StdioCollector { id: aout; onStreamFinished: if (aout.text.trim() !== "ok") readProc.running = true } }
   // A screen plugged in or out while the popup is open shows at once
   Connections { target: Quickshell; function onScreensChanged() { if (root.shown) readProc.running = true; } }
   FileView { id: monitorsFile; path: Quickshell.env("HOME") + "/.config/hypr/monitors.conf"; blockLoading: true; watchChanges: true; onFileChanged: reload() }
@@ -107,7 +108,14 @@ BarPopup {
     if (applyProc.running) return;
     applyProc.command = ["hyprctl", "keyword", "monitor", screen.rule + ", preferred, auto, " + scaleValue(scaleParts)];
     applyProc.running = true;
+    markScale(screen.rule, scaleValue(scaleParts));
     saveScale(screen.rule, scaleValue(scaleParts));
+  }
+  // The chosen part shows filled at once
+  function markScale(rule, scale) {
+    screens = screens.map(function (savedScreen) {
+      return savedScreen.rule === rule ? Object.assign({}, savedScreen, { scale: scale }) : savedScreen;
+    });
   }
   // Replace the line of this screen and keep every other line as it is
   function saveScale(rule, scale) {
