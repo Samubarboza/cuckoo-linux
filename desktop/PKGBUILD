@@ -17,6 +17,8 @@ depends=('quickshell' 'swaync'                       # the bar with its popups, 
          'papirus-icon-theme' 'hicolor-icon-theme'   # the only icon theme, and its base
          'gsettings-desktop-schemas'                 # makes papirus the icon theme of the gtk apps
          'adw-gtk-theme'                             # the dark look of the gtk apps
+         'xdg-desktop-portal-gtk'                    # tells every app about the dark mode, and opens files
+         'xdg-desktop-portal-hyprland'               # makes hyprland use the gtk portal, and shares the screen
          'ttf-jetbrains-mono-nerd'                   # the icons of the bar and the lock screen
          'ttf-ibm-plex'                              # the font of the system and the terminal
          'ttf-roboto' 'inter-font' 'ttf-liberation'  # more fonts to pick in the theme
