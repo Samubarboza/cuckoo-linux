@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Build the offline repo that travels inside the ISO, so the install needs no internet.
-# It compiles yay, downloads the package list with its dependencies, and makes the repo
-# database that pacman reads.
+# It compiles the AUR packages, downloads the package list with its dependencies, and makes
+# the repo database that pacman reads.
 
 set -euo pipefail
 
@@ -12,7 +12,7 @@ project_dir="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")/..")"
 offline_repo_dir="${project_dir}/configs/cuckoo/isofs/offline-repo"
 package_list_file="${project_dir}/configs/cuckoo/airootfs/usr/local/share/cuckoo/offline-packages.txt"
 repo_database="${offline_repo_dir}/cuckoo-offline.db.tar.gz"
-yay_aur_url="https://aur.archlinux.org/yay.git"
+aur_packages=(yay)
 build_user="nobody"
 
 for required_command in makepkg git go pacman repo-add; do
@@ -30,25 +30,26 @@ fi
 rm -rf -- "${offline_repo_dir}"
 install -d -m 0755 -- "${offline_repo_dir}"
 
-# makepkg refuses to run as root, so a plain user builds yay in a temporary copy.
+# makepkg refuses to run as root, so a plain user builds the package in a temporary copy.
 # --nodeps because its build tools are already in the builder image.
-build_yay() {
+build_aur_package() {
+  local package_name="$1"
   local temporary_dir
   temporary_dir="$(mktemp -d)"
   trap 'rm -rf -- "${temporary_dir}"' RETURN
 
-  git clone --depth 1 -- "${yay_aur_url}" "${temporary_dir}/yay"
+  git clone --depth 1 -- "https://aur.archlinux.org/${package_name}.git" "${temporary_dir}/${package_name}"
 
   if ((EUID == 0)); then
     chown -R "${build_user}:" -- "${temporary_dir}"
     setpriv --reuid "${build_user}" --regid "${build_user}" --clear-groups \
       env HOME="${temporary_dir}" PATH="${PATH}" \
-      bash -c "cd '${temporary_dir}/yay' && makepkg --clean --nodeps"
+      bash -c "cd '${temporary_dir}/${package_name}' && makepkg --clean --nodeps"
   else
-    (cd "${temporary_dir}/yay" && makepkg --clean --nodeps)
+    (cd "${temporary_dir}/${package_name}" && makepkg --clean --nodeps)
   fi
 
-  install -m 0644 -- "${temporary_dir}"/yay/*.pkg.tar.zst "${offline_repo_dir}/"
+  install -m 0644 -- "${temporary_dir}/${package_name}"/*.pkg.tar.zst "${offline_repo_dir}/"
 }
 
 # Download every package from the list with its dependencies, without installing them.
@@ -58,8 +59,9 @@ download_packages() {
   temporary_db="$(mktemp -d)"
   trap 'rm -rf -- "${temporary_db}"' RETURN
 
-  # yay is not in the Arch repos, build_yay already puts it in the repo
-  mapfile -t packages < <(grep -vE '^[[:space:]]*#|^[[:space:]]*$|^yay$' "${package_list_file}")
+  # The AUR packages are not in the Arch repos, build_aur_package already puts them in the repo
+  mapfile -t packages < <(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "${package_list_file}" \
+    | grep -vxF -f <(printf '%s\n' "${aur_packages[@]}"))
 
   # --disable-sandbox so pacman can write to our own dbpath and cachedir inside
   # the builder. The download is controlled here, not from an untrusted place.
@@ -67,8 +69,10 @@ download_packages() {
     --disable-sandbox --noconfirm -- "${packages[@]}"
 }
 
-printf 'Compiling yay...\n'
-build_yay
+for aur_package in "${aur_packages[@]}"; do
+  printf 'Compiling %s...\n' "${aur_package}"
+  build_aur_package "${aur_package}"
+done
 
 printf 'Downloading the packages...\n'
 download_packages
