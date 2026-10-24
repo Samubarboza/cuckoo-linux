@@ -27,11 +27,11 @@ BarPopup {
         width: parent.width
         spacing: 10
         Text { id: pct; text: root.level + "%"; font.family: Theme.fontFamily; font.pixelSize: 13; font.weight: Font.DemiBold; color: Theme.text }
-        Text { width: parent.width - pct.implicitWidth - 10; horizontalAlignment: Text.AlignRight; text: root.statusText(); font.family: Theme.fontFamily; font.pixelSize: 11; color: Theme.subtitle }
+        Text { width: parent.width - pct.implicitWidth - 10; horizontalAlignment: Text.AlignRight; text: root.statusText(); font.family: Theme.fontFamily; font.pixelSize: 11; color: Theme.dim }
       }
       Rectangle {
-        width: parent.width; height: 3; radius: 3; color: Qt.rgba(1, 1, 1, 0.20)
-        Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * root.level / 100; height: 3; radius: 3; color: "#ffffff" }
+        width: parent.width; height: 3; radius: 3; color: Theme.glass
+        Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * root.level / 100; height: 3; radius: 3; color: Theme.accent }
       }
     }
 

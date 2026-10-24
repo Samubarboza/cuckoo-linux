@@ -44,9 +44,9 @@ PanelWindow {
   Rectangle {
     anchors.fill: parent
     radius: Theme.launcherRadius
-    color: Theme.launcherBackground
+    color: Theme.card
     border.width: 1
-    border.color: Theme.launcherBorder
+    border.color: Theme.line
     opacity: root.shown ? 1 : 0
 
     Behavior on opacity {
@@ -63,7 +63,7 @@ PanelWindow {
         width: parent.width
         height: 40
         radius: Theme.launcherFieldRadius
-        color: Theme.launcherField
+        color: Theme.hover
 
         Row {
           anchors.fill: parent
@@ -121,9 +121,9 @@ PanelWindow {
               anchors.fill: parent
               anchors.margins: 5
               radius: Theme.launcherCellRadius
-              color: selected ? Theme.launcherField : "transparent"
+              color: selected ? Theme.hover : "transparent"
               border.width: selected ? 1 : 0
-              border.color: Theme.launcherBorder
+              border.color: Theme.line
 
               Column {
                 anchors.centerIn: parent

@@ -42,8 +42,8 @@ BarPopup {
         Rectangle {
           id: track
           anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-          height: 3; radius: 3; color: Qt.rgba(1, 1, 1, 0.25)
-          Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * (root.audio ? root.audio.volume : 0); height: 3; radius: 3; color: "#ffffff" }
+          height: 3; radius: 3; color: Theme.glass
+          Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * (root.audio ? root.audio.volume : 0); height: 3; radius: 3; color: Theme.accent }
         }
         MouseArea { anchors.fill: parent; onPressed: root.setVol(mouse.x); onPositionChanged: if (pressed) root.setVol(mouse.x) }
       }
@@ -65,7 +65,7 @@ BarPopup {
       visible: root.choices.length < 2
       anchors.left: parent.left; anchors.right: parent.right
       text: root.sink ? root.sink.description : ""
-      color: Theme.subtitle; font.family: Theme.fontFamily; font.pixelSize: 11
+      color: Theme.dim; font.family: Theme.fontFamily; font.pixelSize: 11
       elide: Text.ElideRight
     }
 
@@ -122,10 +122,10 @@ BarPopup {
     property bool active: false
     signal toggled
     width: 30; height: 18; radius: 999
-    color: active ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.22)
+    color: active ? Theme.accent : Theme.glass
     Rectangle {
       width: 14; height: 14; radius: 999
-      color: parent.active ? "#1c1c1e" : "#ffffff"
+      color: parent.active ? Theme.background : Theme.text
       anchors.verticalCenter: parent.verticalCenter
       x: parent.active ? parent.width - width - 2 : 2
       Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }

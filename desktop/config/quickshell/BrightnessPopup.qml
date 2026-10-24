@@ -29,11 +29,11 @@ BarPopup {
       Rectangle {
         id: track
         anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-        height: 3; radius: 3; color: Qt.rgba(1, 1, 1, 0.25)
+        height: 3; radius: 3; color: Theme.glass
         Rectangle {
           anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
           width: parent.width * (root.percent - root.minBrightness) / (100 - root.minBrightness)
-          height: 3; radius: 3; color: "#ffffff"
+          height: 3; radius: 3; color: Theme.accent
         }
       }
       MouseArea {

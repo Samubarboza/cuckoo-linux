@@ -75,13 +75,13 @@ BarPopup {
       anchors.left: parent.left
       anchors.right: parent.right
       height: 1
-      color: Qt.rgba(1, 1, 1, 0.12)
+      color: Theme.line
       visible: root.radioEnabled
     }
 
     Text {
       text: "Redes"
-      color: Theme.subtitle
+      color: Theme.dim
       font.family: Theme.fontFamily
       font.pixelSize: 11
       font.weight: Font.DemiBold
@@ -122,7 +122,7 @@ BarPopup {
       anchors.right: parent.right
       height: 34
       radius: Theme.cornerRadius
-      color: hover.hovered ? Qt.rgba(1, 1, 1, 0.14) : (modelData.active ? Qt.rgba(1, 1, 1, 0.10) : "transparent")
+      color: hover.hovered ? Theme.hover : (modelData.active ? Theme.selected : "transparent")
 
       Row {
         anchors.fill: parent
@@ -150,7 +150,7 @@ BarPopup {
           id: state
           anchors.verticalCenter: parent.verticalCenter
           text: root.connectingSsid === modelData.ssid ? "Conectando..." : (modelData.active ? "󰄬" : "")
-          color: Qt.rgba(1, 1, 1, 0.70)
+          color: Theme.soft
           font.family: Theme.iconFont
           font.pixelSize: 12
         }
@@ -158,7 +158,7 @@ BarPopup {
           id: lock
           anchors.verticalCenter: parent.verticalCenter
           text: modelData.secure ? "󰌾" : ""
-          color: Theme.subtitle
+          color: Theme.dim
           font.family: Theme.iconFont
           font.pixelSize: 12
         }
@@ -189,7 +189,7 @@ BarPopup {
 
         Text {
           text: "Contraseña"
-          color: Theme.subtitle
+          color: Theme.dim
           font.family: Theme.fontFamily
           font.pixelSize: 11
           font.weight: Font.DemiBold
@@ -199,9 +199,9 @@ BarPopup {
           anchors.right: parent.right
           height: 32
           radius: Theme.cornerRadius
-          color: Qt.rgba(1, 1, 1, 0.10)
+          color: Theme.selected
           border.width: 1
-          border.color: Qt.rgba(1, 1, 1, 0.14)
+          border.color: Theme.line
 
           Row {
             anchors.fill: parent
@@ -230,7 +230,7 @@ BarPopup {
               id: eye
               anchors.verticalCenter: parent.verticalCenter
               text: root.showPassword ? "󰈉" : "󰈈"
-              color: Qt.rgba(1, 1, 1, 0.70)
+              color: Theme.soft
               font.family: Theme.iconFont
               font.pixelSize: 14
 
@@ -245,12 +245,13 @@ BarPopup {
           anchors.right: parent.right
           height: 30
           radius: Theme.cornerRadius
-          color: connectHover.hovered ? Qt.rgba(1, 1, 1, 0.28) : Qt.rgba(1, 1, 1, 0.18)
+          color: connectHover.hovered ? Qt.lighter(Theme.accent, 1.08) : Theme.accent
 
+          // Dark text, so it reads well on the soft blue
           Text {
             anchors.centerIn: parent
             text: "Conectar"
-            color: Theme.text
+            color: Theme.background
             font.family: Theme.fontFamily
             font.pixelSize: 12
             font.weight: Font.DemiBold
@@ -274,13 +275,13 @@ BarPopup {
     width: 30
     height: 18
     radius: 999
-    color: active ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.22)
+    color: active ? Theme.accent : Theme.glass
 
     Rectangle {
       width: 14
       height: 14
       radius: 999
-      color: parent.active ? "#1c1c1e" : "#ffffff"
+      color: parent.active ? Theme.background : Theme.text
       anchors.verticalCenter: parent.verticalCenter
       x: parent.active ? parent.width - width - 2 : 2
 

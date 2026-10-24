@@ -35,12 +35,12 @@ BarPopup {
       anchors.left: parent.left; anchors.right: parent.right; spacing: 10
       Text { text: icon; font.family: Theme.iconFont; font.pixelSize: 17; color: Theme.text }
       Text { text: label; width: parent.width - 34 - d.implicitWidth - v.implicitWidth - 20; font.family: Theme.fontFamily; font.pixelSize: 13; font.weight: Font.DemiBold; color: Theme.text }
-      Text { id: d; text: detail; font.family: Theme.fontFamily; font.pixelSize: 11; color: Theme.subtitle }
+      Text { id: d; text: detail; font.family: Theme.fontFamily; font.pixelSize: 11; color: Theme.dim }
       Text { id: v; text: Math.round(value) + "%"; font.family: Theme.fontFamily; font.pixelSize: 12; font.weight: Font.DemiBold; color: Theme.soft }
     }
     Rectangle {
-      anchors.left: parent.left; anchors.right: parent.right; height: 3; radius: 3; color: Qt.rgba(1, 1, 1, 0.20)
-      Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * Math.max(0, Math.min(1, value / 100)); height: 3; radius: 3; color: "#ffffff" }
+      anchors.left: parent.left; anchors.right: parent.right; height: 3; radius: 3; color: Theme.glass
+      Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * Math.max(0, Math.min(1, value / 100)); height: 3; radius: 3; color: Theme.accent }
     }
   }
 
