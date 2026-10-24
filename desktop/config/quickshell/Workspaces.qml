@@ -24,7 +24,7 @@ Row {
       implicitWidth: Math.max(28, name.implicitWidth + 16)
       implicitHeight: 20
       radius: Theme.cornerRadius
-      color: isActive ? Theme.glass : (hover.hovered ? Qt.rgba(1, 1, 1, 0.12) : "transparent")
+      color: isActive ? Theme.glass : (hover.hovered ? Theme.hover : "transparent")
 
       Text {
         id: name

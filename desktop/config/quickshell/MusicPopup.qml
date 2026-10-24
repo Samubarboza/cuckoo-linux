@@ -39,7 +39,7 @@ BarPopup {
       Text {
         width: parent.width
         text: root.player ? root.player.trackArtist : ""
-        color: Theme.subtitle
+        color: Theme.dim
         font.family: Theme.fontFamily
         font.pixelSize: 12
         elide: Text.ElideRight

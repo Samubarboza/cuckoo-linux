@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-set -e -u
+set -e -u # the option -e stop script if have something error. the option -u stop script if we used one variable that not exists
 shopt -s extglob
 
 # Control the environment

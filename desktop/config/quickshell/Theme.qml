@@ -15,12 +15,17 @@ Singleton {
   readonly property int fontSize: 13
   readonly property int fontWeight: Font.Medium
 
-  // Colors
+  // Text, from strong to soft
   readonly property color text: "#ffffff"
   readonly property color soft: Qt.rgba(1, 1, 1, 0.85)
-  readonly property color dim: Qt.rgba(1, 1, 1, 0.45)
-  readonly property color glass: Qt.rgba(1, 1, 1, 0.22)
+  readonly property color dim: Qt.rgba(1, 1, 1, 0.50)
+
+  // White layers on the dark cards, from light to strong
+  readonly property color selected: Qt.rgba(1, 1, 1, 0.10)
+  readonly property color line: Qt.rgba(1, 1, 1, 0.12)
   readonly property color hover: Qt.rgba(1, 1, 1, 0.14)
+  readonly property color glass: Qt.rgba(1, 1, 1, 0.22)
+
   readonly property color red: "#ff6961"
   readonly property color amber: "#ffd60a"
 
@@ -30,7 +35,6 @@ Singleton {
 
   // Popup cards: transparent on top, darker to the bottom
   readonly property int cardRadius: 14
-  readonly property color subtitle: Qt.rgba(1, 1, 1, 0.55)
   readonly property color cardFade0: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.0)
   readonly property color cardFade1: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.86)
   readonly property color cardFade2: Qt.rgba(24 / 255, 24 / 255, 26 / 255, 0.95)

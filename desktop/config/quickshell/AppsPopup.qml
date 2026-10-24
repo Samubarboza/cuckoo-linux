@@ -28,7 +28,7 @@ BarPopup {
           anchors.left: parent.left; anchors.right: parent.right
           height: 36
           radius: Theme.cornerRadius
-          color: hover.hovered ? Qt.rgba(1, 1, 1, 0.14) : (modelData.activated ? Qt.rgba(1, 1, 1, 0.10) : "transparent")
+          color: hover.hovered ? Theme.hover : (modelData.activated ? Theme.selected : "transparent")
           Row {
             anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 10
             IconImage {
