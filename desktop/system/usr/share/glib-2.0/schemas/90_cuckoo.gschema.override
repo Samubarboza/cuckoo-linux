@@ -3,3 +3,8 @@
 icon-theme='Papirus-Dark'
 font-name='IBM Plex Sans 11'
 monospace-font-name='IBM Plex Mono 11'
+color-scheme='prefer-dark'
+gtk-theme='adw-gtk3-dark'
+
+[org.gnome.desktop.wm.preferences]
+button-layout=':close'
