@@ -38,19 +38,11 @@ PopupWindow {
     gradient: Gradient {
       GradientStop {
         position: 0.0
-        color: Theme.cardFade0
+        color: Theme.cardTransparent
       }
       GradientStop {
         position: Math.min(1, 26 / root.height)
-        color: Theme.cardFade1
-      }
-      GradientStop {
-        position: Math.min(1, 60 / root.height)
-        color: Theme.cardFade2
-      }
-      GradientStop {
-        position: 1.0
-        color: Theme.cardFade3
+        color: Theme.card
       }
     }
 

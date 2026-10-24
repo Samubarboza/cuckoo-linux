@@ -125,7 +125,7 @@ BarPopup {
     color: active ? Theme.soft : Theme.glass
     Rectangle {
       width: 14; height: 14; radius: 999
-      color: parent.active ? "#1c1c1e" : Theme.text
+      color: parent.active ? Theme.background : Theme.text
       anchors.verticalCenter: parent.verticalCenter
       x: parent.active ? parent.width - width - 2 : 2
       Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }

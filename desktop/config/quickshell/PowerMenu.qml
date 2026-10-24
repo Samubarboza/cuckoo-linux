@@ -19,7 +19,7 @@ PanelWindow {
     { id: "suspend", command: ["systemctl", "suspend"], iconBackground: Theme.powerAccentSoft },
     { id: "lock", command: ["loginctl", "lock-session"], iconBackground: Theme.powerAccentSoft },
     { id: "logout", command: ["hyprctl", "dispatch", "exit"], iconBackground: Theme.powerAccentSoft },
-    { id: "reboot", command: ["systemctl", "reboot"], iconBackground: Theme.powerIconNeutral },
+    { id: "reboot", command: ["systemctl", "reboot"], iconBackground: Theme.selected },
     { id: "shutdown", command: ["systemctl", "poweroff"], iconBackground: Theme.powerRedSoft, danger: true }
   ]
   property bool shown: false
@@ -54,9 +54,9 @@ PanelWindow {
     anchors.fill: parent
     anchors.margins: root.cardMargin
     radius: Theme.powerMenuRadius
-    color: Theme.powerMenuBackground
+    color: Theme.card
     border.width: 1
-    border.color: Theme.powerMenuLine
+    border.color: Theme.line
     opacity: root.shown ? 1 : 0
     focus: true
     Keys.onEscapePressed: root.close()
@@ -112,7 +112,7 @@ PanelWindow {
             spacing: 3
             Text {
               text: root.userName
-              color: Theme.powerMenuName; font.family: Theme.fontFamily; font.pixelSize: 16; font.weight: Font.DemiBold
+              color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 16; font.weight: Font.DemiBold
             }
             Text {
               text: "cuckoo linux"
@@ -131,7 +131,7 @@ PanelWindow {
           anchors.leftMargin: 4; anchors.rightMargin: 4
           anchors.verticalCenter: parent.verticalCenter
           height: 1
-          color: Theme.powerMenuLine
+          color: Theme.line
         }
       }
 
@@ -151,7 +151,7 @@ PanelWindow {
             anchors.fill: parent
             anchors.topMargin: 3; anchors.bottomMargin: 3
             radius: Theme.powerButtonRadius
-            color: !highlighted ? "transparent" : danger ? Theme.powerRedHover : Theme.powerMenuHover
+            color: !highlighted ? "transparent" : danger ? Theme.powerRedHover : Theme.selected
             border.width: 1
             border.color: !highlighted ? "transparent" : danger ? Theme.powerRedBorder : Theme.powerAccentBorder
 
@@ -174,7 +174,7 @@ PanelWindow {
               Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: Language.text(modelData.id)
-                color: danger ? Theme.powerRed : highlighted ? Theme.powerAccent : Theme.powerMenuLabel
+                color: danger ? Theme.powerRed : highlighted ? Theme.powerAccent : Theme.soft
                 font.family: Theme.fontFamily; font.pixelSize: 15
                 font.weight: danger || highlighted ? Font.DemiBold : Font.Medium
               }
