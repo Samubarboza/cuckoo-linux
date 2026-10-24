@@ -12,7 +12,7 @@ project_dir="$(realpath -- "$(dirname -- "${BASH_SOURCE[0]}")/..")"
 offline_repo_dir="${project_dir}/configs/cuckoo/isofs/offline-repo"
 package_list_file="${project_dir}/configs/cuckoo/airootfs/usr/local/share/cuckoo/offline-packages.txt"
 repo_database="${offline_repo_dir}/cuckoo-offline.db.tar.gz"
-aur_packages=(yay)
+aur_packages=(yay catppuccin-cursors-mocha)
 build_user="nobody"
 
 for required_command in makepkg git go pacman repo-add; do
