@@ -43,7 +43,7 @@ BarPopup {
           id: track
           anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
           height: 3; radius: 3; color: Theme.glass
-          Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * (root.audio ? root.audio.volume : 0); height: 3; radius: 3; color: Theme.text }
+          Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * (root.audio ? root.audio.volume : 0); height: 3; radius: 3; color: Theme.accent }
         }
         MouseArea { anchors.fill: parent; onPressed: root.setVol(mouse.x); onPositionChanged: if (pressed) root.setVol(mouse.x) }
       }
@@ -122,7 +122,7 @@ BarPopup {
     property bool active: false
     signal toggled
     width: 30; height: 18; radius: 999
-    color: active ? Theme.soft : Theme.glass
+    color: active ? Theme.accent : Theme.glass
     Rectangle {
       width: 14; height: 14; radius: 999
       color: parent.active ? Theme.background : Theme.text

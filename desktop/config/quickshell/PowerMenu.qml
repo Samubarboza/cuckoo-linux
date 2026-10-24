@@ -16,11 +16,11 @@ PanelWindow {
   readonly property string userName: Quickshell.env("USER")
   // The id names the text in Language.qml and the icon in /usr/share/cuckoo/icons
   readonly property var powerActions: [
-    { id: "suspend", command: ["systemctl", "suspend"], iconBackground: Theme.powerAccentSoft },
-    { id: "lock", command: ["loginctl", "lock-session"], iconBackground: Theme.powerAccentSoft },
-    { id: "logout", command: ["hyprctl", "dispatch", "exit"], iconBackground: Theme.powerAccentSoft },
+    { id: "suspend", command: ["systemctl", "suspend"], iconBackground: Theme.accentSoft },
+    { id: "lock", command: ["loginctl", "lock-session"], iconBackground: Theme.accentSoft },
+    { id: "logout", command: ["hyprctl", "dispatch", "exit"], iconBackground: Theme.accentSoft },
     { id: "reboot", command: ["systemctl", "reboot"], iconBackground: Theme.selected },
-    { id: "shutdown", command: ["systemctl", "poweroff"], iconBackground: Theme.powerRedSoft, danger: true }
+    { id: "shutdown", command: ["systemctl", "poweroff"], iconBackground: Theme.redSoft, danger: true }
   ]
   property bool shown: false
   // The mouse and the arrows move the same selection
@@ -88,16 +88,16 @@ PanelWindow {
             id: avatar
             width: root.avatarSize; height: root.avatarSize
             radius: root.avatarSize / 2
-            color: Theme.powerAccentSoft
+            color: Theme.accentSoft
             border.width: 1
-            border.color: Theme.powerAvatarBorder
+            border.color: Theme.accentLine
 
             // Without ~/.face, the first letter of the name
             Text {
               anchors.centerIn: parent
               visible: photo.status !== Image.Ready
               text: root.userName.charAt(0).toUpperCase()
-              color: Theme.powerAccent; font.family: Theme.fontFamily; font.pixelSize: 40; font.weight: Font.DemiBold
+              color: Theme.accent; font.family: Theme.fontFamily; font.pixelSize: 40; font.weight: Font.DemiBold
             }
             Image {
               id: photo
@@ -141,7 +141,7 @@ PanelWindow {
         delegate: Item {
           required property var modelData
           required property int index
-          // Shut down stays red, the others turn lilac when selected
+          // Shut down stays red, the others take the accent when selected
           readonly property bool danger: modelData.danger === true
           readonly property bool highlighted: index === root.selectedIndex
           width: parent.width
@@ -151,9 +151,9 @@ PanelWindow {
             anchors.fill: parent
             anchors.topMargin: 3; anchors.bottomMargin: 3
             radius: Theme.powerButtonRadius
-            color: !highlighted ? "transparent" : danger ? Theme.powerRedHover : Theme.selected
+            color: !highlighted ? "transparent" : danger ? Theme.redSoft : Theme.selected
             border.width: 1
-            border.color: !highlighted ? "transparent" : danger ? Theme.powerRedBorder : Theme.powerAccentBorder
+            border.color: !highlighted ? "transparent" : danger ? Theme.redLine : Theme.accentLine
 
             Row {
               anchors.fill: parent
@@ -174,7 +174,7 @@ PanelWindow {
               Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: Language.text(modelData.id)
-                color: danger ? Theme.powerRed : highlighted ? Theme.powerAccent : Theme.soft
+                color: danger ? Theme.red : highlighted ? Theme.accent : Theme.soft
                 font.family: Theme.fontFamily; font.pixelSize: 15
                 font.weight: danger || highlighted ? Font.DemiBold : Font.Medium
               }

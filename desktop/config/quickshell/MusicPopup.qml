@@ -82,7 +82,7 @@ BarPopup {
     width: 44
     height: 28
     radius: Theme.cornerRadius
-    color: hover.hovered ? (danger ? Qt.rgba(1, 105 / 255, 97 / 255, 0.16) : Theme.hover) : "transparent"
+    color: hover.hovered ? (danger ? Theme.redSoft : Theme.hover) : "transparent"
 
     Text {
       anchors.centerIn: parent

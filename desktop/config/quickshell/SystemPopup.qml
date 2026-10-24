@@ -40,7 +40,7 @@ BarPopup {
     }
     Rectangle {
       anchors.left: parent.left; anchors.right: parent.right; height: 3; radius: 3; color: Theme.glass
-      Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * Math.max(0, Math.min(1, value / 100)); height: 3; radius: 3; color: Theme.text }
+      Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * Math.max(0, Math.min(1, value / 100)); height: 3; radius: 3; color: Theme.accent }
     }
   }
 

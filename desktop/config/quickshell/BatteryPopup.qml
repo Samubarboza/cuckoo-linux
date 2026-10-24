@@ -31,7 +31,7 @@ BarPopup {
       }
       Rectangle {
         width: parent.width; height: 3; radius: 3; color: Theme.glass
-        Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * root.level / 100; height: 3; radius: 3; color: Theme.text }
+        Rectangle { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: parent.width * root.level / 100; height: 3; radius: 3; color: Theme.accent }
       }
     }
 

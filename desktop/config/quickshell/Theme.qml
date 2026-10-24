@@ -26,8 +26,14 @@ Singleton {
   readonly property color hover: Qt.rgba(1, 1, 1, 0.14)
   readonly property color glass: Qt.rgba(1, 1, 1, 0.22)
 
-  readonly property color red: "#ff6961"
-  readonly property color amber: "#ffd60a"
+  // Accent and alerts: soft colors from one family. The soft and line versions follow their color
+  readonly property color accent: "#89b4fa"
+  readonly property color accentSoft: Qt.rgba(accent.r, accent.g, accent.b, 0.12)
+  readonly property color accentLine: Qt.rgba(accent.r, accent.g, accent.b, 0.22)
+  readonly property color red: "#f38ba8"
+  readonly property color redSoft: Qt.rgba(red.r, red.g, red.b, 0.12)
+  readonly property color redLine: Qt.rgba(red.r, red.g, red.b, 0.22)
+  readonly property color amber: "#f9e2af"
 
   // Bar background, dark glass from top to bottom
   readonly property color barTop: Qt.rgba(0, 0, 0, 0.28)
@@ -46,16 +52,8 @@ Singleton {
   readonly property int launcherFieldRadius: 12
   readonly property int launcherCellRadius: 14
 
-  // Power menu: lilac on hover and red to shut down
+  // Power menu
   readonly property int powerMenuRadius: 20
   readonly property int powerButtonRadius: 15
   readonly property int powerIconRadius: 10
-  readonly property color powerAccent: "#9d7dea"
-  readonly property color powerAccentSoft: Qt.rgba(157 / 255, 125 / 255, 234 / 255, 0.12)
-  readonly property color powerAccentBorder: Qt.rgba(157 / 255, 125 / 255, 234 / 255, 0.22)
-  readonly property color powerAvatarBorder: Qt.rgba(157 / 255, 125 / 255, 234 / 255, 0.30)
-  readonly property color powerRed: "#f87171"
-  readonly property color powerRedSoft: Qt.rgba(248 / 255, 113 / 255, 113 / 255, 0.12)
-  readonly property color powerRedHover: Qt.rgba(248 / 255, 113 / 255, 113 / 255, 0.08)
-  readonly property color powerRedBorder: Qt.rgba(248 / 255, 113 / 255, 113 / 255, 0.22)
 }

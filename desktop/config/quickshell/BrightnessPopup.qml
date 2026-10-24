@@ -33,7 +33,7 @@ BarPopup {
         Rectangle {
           anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
           width: parent.width * (root.percent - root.minBrightness) / (100 - root.minBrightness)
-          height: 3; radius: 3; color: Theme.text
+          height: 3; radius: 3; color: Theme.accent
         }
       }
       MouseArea {

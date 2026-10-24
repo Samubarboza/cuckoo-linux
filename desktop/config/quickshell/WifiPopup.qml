@@ -245,12 +245,13 @@ BarPopup {
           anchors.right: parent.right
           height: 30
           radius: Theme.cornerRadius
-          color: connectHover.hovered ? Theme.glass : Theme.hover
+          color: connectHover.hovered ? Qt.lighter(Theme.accent, 1.08) : Theme.accent
 
+          // Dark text, so it reads well on the soft blue
           Text {
             anchors.centerIn: parent
             text: "Conectar"
-            color: Theme.text
+            color: Theme.background
             font.family: Theme.fontFamily
             font.pixelSize: 12
             font.weight: Font.DemiBold
@@ -274,7 +275,7 @@ BarPopup {
     width: 30
     height: 18
     radius: 999
-    color: active ? Theme.soft : Theme.glass
+    color: active ? Theme.accent : Theme.glass
 
     Rectangle {
       width: 14
