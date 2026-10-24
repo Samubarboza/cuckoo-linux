@@ -1,0 +1,19 @@
+/* Cuckoo colors for the gtk apps, the same as the bar. gtk-3.0/gtk.css loads this file too. */
+
+/* One dark background for the whole window */
+@define-color window_bg_color #161a1f;
+@define-color view_bg_color #161a1f;
+@define-color headerbar_bg_color #161a1f;
+@define-color sidebar_bg_color #161a1f;
+@define-color popover_bg_color #161a1f;
+@define-color dialog_bg_color #161a1f;
+
+/* Accent, with dark text so it reads well on the soft blue */
+@define-color accent_color #89b4fa;
+@define-color accent_bg_color #89b4fa;
+@define-color accent_fg_color #161a1f;
+
+/* Red for the actions that delete or remove */
+@define-color destructive_color #f38ba8;
+@define-color destructive_bg_color #f38ba8;
+@define-color destructive_fg_color #161a1f;
