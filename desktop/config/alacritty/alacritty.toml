@@ -1,1 +1,5 @@
 # Alacritty settings for Cuckoo Linux.
+
+# Bold and italic come from the same family
+[font]
+normal = { family = "IBM Plex Mono", style = "Thin" }
