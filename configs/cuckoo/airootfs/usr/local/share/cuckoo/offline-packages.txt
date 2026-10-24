@@ -47,6 +47,10 @@ hicolor-icon-theme
 gsettings-desktop-schemas
 ttf-jetbrains-mono-nerd
 adwaita-fonts
+ttf-ibm-plex
+ttf-roboto
+inter-font
+ttf-liberation
 noto-fonts-emoji
 starship
 atuin

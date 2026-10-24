@@ -17,6 +17,8 @@ depends=('quickshell' 'swaync'                       # the bar with its popups, 
          'papirus-icon-theme' 'hicolor-icon-theme'   # the only icon theme, and its base
          'gsettings-desktop-schemas'                 # makes papirus the icon theme of the gtk apps
          'ttf-jetbrains-mono-nerd' 'adwaita-fonts'   # the bar lines up with these fonts
+         'ttf-ibm-plex'                              # the font of the system and the terminal
+         'ttf-roboto' 'inter-font' 'ttf-liberation'  # more fonts to pick in the theme
          'noto-fonts-emoji'                          # the weather icon is an emoji
          'plymouth'                                  # the boot splash
          'xdg-user-dirs'                             # the home folders, named in the user language
