@@ -48,6 +48,7 @@ gsettings-desktop-schemas
 adw-gtk-theme
 xdg-desktop-portal-gtk
 xdg-desktop-portal-hyprland
+qt6ct
 ttf-jetbrains-mono-nerd
 ttf-ibm-plex
 ttf-roboto
