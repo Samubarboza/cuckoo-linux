@@ -16,7 +16,7 @@ depends=('quickshell' 'swaync'                       # the bar with its popups, 
          'qt6-svg'                                   # draws the svg app icons
          'papirus-icon-theme' 'hicolor-icon-theme'   # the only icon theme, and its base
          'gsettings-desktop-schemas'                 # makes papirus the icon theme of the gtk apps
-         'ttf-jetbrains-mono-nerd' 'adwaita-fonts'   # the bar lines up with these fonts
+         'ttf-jetbrains-mono-nerd'                   # the icons of the bar and the lock screen
          'ttf-ibm-plex'                              # the font of the system and the terminal
          'ttf-roboto' 'inter-font' 'ttf-liberation'  # more fonts to pick in the theme
          'noto-fonts-emoji'                          # the weather icon is an emoji

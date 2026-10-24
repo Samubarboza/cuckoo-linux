@@ -10,7 +10,7 @@ Singleton {
   readonly property int cornerRadius: 7
 
   // Fonts
-  readonly property string fontFamily: "Adwaita Sans"
+  readonly property string fontFamily: "IBM Plex Sans"
   readonly property string iconFont: "JetBrainsMono Nerd Font Propo"
   readonly property int fontSize: 13
   readonly property int fontWeight: Font.Medium
