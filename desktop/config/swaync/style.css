@@ -1,16 +1,2 @@
-/* Cuckoo colors for the notifications, the same as the bar. swaync loads its own style first, this file only changes its colors. */
-:root {
-  --cc-bg: rgba(22, 26, 31, 0.90);
-  --noti-bg: 22, 26, 31;
-  --noti-bg-alpha: 0.90;
-  --noti-bg-darker: rgb(22, 26, 31);
-  --noti-border-color: rgba(255, 255, 255, 0.12);
-  --noti-bg-hover: rgba(255, 255, 255, 0.14);
-  --noti-bg-focus: rgba(255, 255, 255, 0.10);
-  --noti-close-bg: rgba(255, 255, 255, 0.14);
-  --noti-close-bg-hover: rgba(255, 255, 255, 0.22);
-  --text-color: #ffffff;
-  --text-color-disabled: rgba(255, 255, 255, 0.50);
-  --bg-selected: #89b4fa;
-  --border-radius: 14px;
-}
+/* Cuckoo colors for the notifications, made by cuckoo-theme. swaync loads its own style first. */
+@import url("../cuckoo/theme/swaync.css");

@@ -230,8 +230,30 @@ fixed="IBM Plex Mono,${system_font_size}"
 EOF
 }
 
+# The colors of the notifications. swaync loads its own style first, this only changes its variables.
+make_swaync_css() {
+  cat <<EOF
+/* Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set. */
+:root {
+  --cc-bg: rgba(22, 26, 31, 0.90);
+  --noti-bg: 22, 26, 31;
+  --noti-bg-alpha: 0.90;
+  --noti-bg-darker: rgb(22, 26, 31);
+  --noti-border-color: rgba(255, 255, 255, 0.12);
+  --noti-bg-hover: rgba(255, 255, 255, 0.14);
+  --noti-bg-focus: rgba(255, 255, 255, 0.10);
+  --noti-close-bg: rgba(255, 255, 255, 0.14);
+  --noti-close-bg-hover: rgba(255, 255, 255, 0.22);
+  --text-color: #ffffff;
+  --text-color-disabled: rgba(255, 255, 255, 0.50);
+  --bg-selected: ${theme[accent]};
+  --border-radius: 14px;
+}
+EOF
+}
+
 generate_theme() {
-  local theme_json hyprland_config gtk_css qt_palette qt_config
+  local theme_json hyprland_config gtk_css qt_palette qt_config swaync_css
 
   load_theme
   theme_json="$(theme_as_json)"
@@ -239,6 +261,7 @@ generate_theme() {
   gtk_css="$(make_gtk_css)"
   qt_palette="$(make_qt_palette)"
   qt_config="$(make_qt_config)"
+  swaync_css="$(make_swaync_css)"
 
   install -d -m 0755 -- "${output_dir}" "${qt_config_dir}"
   write_file "${output_dir}/theme.json" "${theme_json}"
@@ -246,6 +269,7 @@ generate_theme() {
   write_file "${output_dir}/gtk.css" "${gtk_css}"
   write_file "${output_dir}/qt6ct-colors.conf" "${qt_palette}"
   write_file "${qt_config_dir}/qt6ct.conf" "${qt_config}"
+  write_file "${output_dir}/swaync.css" "${swaync_css}"
 }
 
 # A default value goes back to the system default, so a later change in the package still reaches the user
@@ -277,6 +301,7 @@ reload_programs() {
   hyprctl setcursor "${theme[cursor]}" "${theme[cursor_size]}" >/dev/null \
     || warn "Hyprland could not change the cursor."
   update_gsettings || warn "Could not save the font and the cursor in gsettings."
+  swaync-client --reload-css >/dev/null || warn "The notifications could not reload the theme."
 }
 
 apply_theme() {
