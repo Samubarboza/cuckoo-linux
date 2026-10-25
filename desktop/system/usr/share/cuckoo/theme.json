@@ -1,0 +1,14 @@
+{
+  "accent": "#89b4fa",
+  "border_color": "#89b4fa",
+  "border_size": 2,
+  "rounding": 10,
+  "window_opacity": 0.90,
+  "inactive_window_opacity": 0.70,
+  "font": "IBM Plex Sans",
+  "font_style": "Regular",
+  "terminal_font": "IBM Plex Mono",
+  "terminal_font_style": "Regular",
+  "cursor": "catppuccin-mocha-dark-cursors",
+  "cursor_size": 24
+}

@@ -2,7 +2,7 @@
 
 # Bold and italic come from the same family
 [font]
-normal = { family = "IBM Plex Mono", style = "Thin" }
+normal = { family = "IBM Plex Mono", style = "Regular" }
 
 # The Cuckoo background and text, with the accent on the cursor and the selection
 [colors.primary]

@@ -28,7 +28,8 @@ depends=('quickshell' 'swaync'                       # the bar with its popups, 
          'plymouth'                                  # the boot splash
          'xdg-user-dirs'                             # the home folders, named in the user language
          'grim' 'slurp'                              # the screenshot key
-         'starship' 'atuin' 'bash-preexec')          # the bash prompt and history
+         'starship' 'atuin' 'bash-preexec'           # the bash prompt and history
+         'jq')                                       # reads the theme files
 
 # config goes to /etc/skel, the folder every new user starts with.
 # system goes to the root of the disk.
