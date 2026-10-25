@@ -5,9 +5,14 @@
 # Cuckoo theme: joins the default theme with the user choices and writes the result.
 # A user value that is not valid is left out, so a broken theme file never breaks the desktop.
 #
-# Usage: cuckoo-theme generate
+# Usage:
+#   cuckoo-theme generate           write the theme from the default theme and the user choices
+#   cuckoo-theme set <key> <value>  save one user choice
+#   cuckoo-theme reset              go back to the default theme
 
 set -euo pipefail
+
+usage="Usage: cuckoo-theme generate | set <key> <value> | reset"
 
 default_theme_file="/usr/share/cuckoo/theme.json"
 config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/cuckoo"
@@ -149,7 +154,37 @@ generate_theme() {
   write_file "${output_dir}/theme.json" "${theme_json}"
 }
 
-case "${1:-}" in
-  generate) generate_theme ;;
-  *) fail "Usage: cuckoo-theme generate" ;;
+# The user file keeps only what is different from the default theme
+set_theme_value() {
+  local key="$1" value="$2" user_theme="{}" updated_theme
+
+  jq -e --arg key "${key}" 'has($key)' "${default_theme_file}" &>/dev/null \
+    || fail "'${key}' is not a theme key."
+  load_theme
+  is_valid_value "${key}" "${value}" || fail "'${value}' is not a valid ${key}."
+
+  if jq -e 'type == "object"' "${user_theme_file}" &>/dev/null; then
+    user_theme="$(<"${user_theme_file}")"
+  fi
+
+  updated_theme="$(jq --arg key "${key}" --arg value "${value}" --slurpfile default_theme "${default_theme_file}" \
+    '$default_theme[0][$key] as $default_value
+      | (if ($default_value | type) == "number" then ($value | tonumber) else $value end) as $new_value
+      | if $new_value == $default_value then del(.[$key]) else .[$key] = $new_value end' <<<"${user_theme}")"
+
+  install -d -m 0755 -- "${config_dir}"
+  write_file "${user_theme_file}" "${updated_theme}"
+  generate_theme
+}
+
+reset_theme() {
+  rm -f -- "${user_theme_file}"
+  generate_theme
+}
+
+case "${1:-} $#" in
+  "generate 1") generate_theme ;;
+  "set 3") set_theme_value "$2" "$3" ;;
+  "reset 1") reset_theme ;;
+  *) fail "${usage}" ;;
 esac
