@@ -20,11 +20,14 @@ config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/cuckoo"
 user_theme_file="${config_dir}/theme.json"
 output_dir="${config_dir}/theme"
 
+system_font_size=11
+
 font_name_pattern='^[A-Za-z0-9 ._-]+$'
 cursor_name_pattern='^[A-Za-z0-9][A-Za-z0-9._-]*$'
 
-# The final value of each key, in the order of the default theme file
+# The final value of each key, in the order of the default theme file, and its default value
 declare -A theme=()
+declare -A default_theme_values=()
 
 fail() {
   printf 'ERROR: %s\n' "$1" >&2
@@ -107,7 +110,8 @@ load_theme() {
   fi
 
   while IFS= read -r key; do
-    theme[${key}]="$(read_theme_value "${default_theme}" "${key}")"
+    default_theme_values[${key}]="$(read_theme_value "${default_theme}" "${key}")"
+    theme[${key}]="${default_theme_values[${key}]}"
     user_value="$(read_theme_value "${user_theme}" "${key}")"
 
     if [[ -z "${user_value}" ]]; then
@@ -168,16 +172,63 @@ env = HYPRCURSOR_SIZE,${theme[cursor_size]}
 EOF
 }
 
+# The libadwaita named colors. gtk-4.0/gtk.css imports it, and gtk-3.0/gtk.css imports that one.
+make_gtk_css() {
+  cat <<EOF
+/* Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set. */
+
+/* One dark background for the whole window */
+@define-color window_bg_color #161a1f;
+@define-color view_bg_color #161a1f;
+@define-color headerbar_bg_color #161a1f;
+@define-color sidebar_bg_color #161a1f;
+@define-color popover_bg_color #161a1f;
+@define-color dialog_bg_color #161a1f;
+
+/* Accent, with dark text so it reads well on a soft color */
+@define-color accent_color ${theme[accent]};
+@define-color accent_bg_color ${theme[accent]};
+@define-color accent_fg_color #161a1f;
+
+/* Red for the actions that delete or remove */
+@define-color destructive_color #f38ba8;
+@define-color destructive_bg_color #f38ba8;
+@define-color destructive_fg_color #161a1f;
+EOF
+}
+
 generate_theme() {
-  local theme_json hyprland_config
+  local theme_json hyprland_config gtk_css
 
   load_theme
   theme_json="$(theme_as_json)"
   hyprland_config="$(make_hyprland_config)"
+  gtk_css="$(make_gtk_css)"
 
   install -d -m 0755 -- "${output_dir}"
   write_file "${output_dir}/theme.json" "${theme_json}"
   write_file "${output_dir}/hyprland.conf" "${hyprland_config}"
+  write_file "${output_dir}/gtk.css" "${gtk_css}"
+}
+
+# A default value goes back to the system default, so a later change in the package still reaches the user
+set_or_reset_gsetting() {
+  local gsettings_key="$1" value="$2" default_value="$3"
+
+  if [[ "${value}" == "${default_value}" ]]; then
+    gsettings reset org.gnome.desktop.interface "${gsettings_key}"
+  else
+    gsettings set org.gnome.desktop.interface "${gsettings_key}" "${value}"
+  fi
+}
+
+# The font and the cursor of the gtk apps
+update_gsettings() {
+  set_or_reset_gsetting font-name \
+    "${theme[font]} ${theme[font_style]} ${system_font_size}" \
+    "${default_theme_values[font]} ${default_theme_values[font_style]} ${system_font_size}"
+  set_or_reset_gsetting cursor-theme "${theme[cursor]}" "${default_theme_values[cursor]}"
+  set_or_reset_gsetting cursor-size "${theme[cursor_size]}" "${default_theme_values[cursor_size]}"
 }
 
 # Outside a running Hyprland there is nothing to reload. A failed reload is not fatal:
@@ -188,6 +239,7 @@ reload_programs() {
   hyprctl reload >/dev/null || warn "Hyprland could not reload the theme."
   hyprctl setcursor "${theme[cursor]}" "${theme[cursor_size]}" >/dev/null \
     || warn "Hyprland could not change the cursor."
+  update_gsettings || warn "Could not save the font and the cursor in gsettings."
 }
 
 apply_theme() {
