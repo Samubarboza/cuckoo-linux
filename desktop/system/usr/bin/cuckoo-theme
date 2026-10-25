@@ -16,9 +16,12 @@ set -euo pipefail
 usage="Usage: cuckoo-theme generate | apply | set <key> <value> | reset"
 
 default_theme_file="/usr/share/cuckoo/theme.json"
-config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/cuckoo"
+user_config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}"
+config_dir="${user_config_dir}/cuckoo"
 user_theme_file="${config_dir}/theme.json"
 output_dir="${config_dir}/theme"
+# qt6ct only reads this file and needs the full path of the palette, so the theme writes it
+qt_config_dir="${user_config_dir}/qt6ct"
 
 system_font_size=11
 
@@ -197,18 +200,52 @@ make_gtk_css() {
 EOF
 }
 
+# The 21 Qt colors in order: text, buttons and borders on the dark background, and the accent
+# for the selection and the links
+make_qt_palette() {
+  local accent="#ff${theme[accent]#\#}"
+
+  cat <<EOF
+; Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set.
+[ColorScheme]
+active_colors=#ffffffff, #ff2d3135, #ff494c50, #ff373a3e, #ff0e1114, #ff32353a, #ffffffff, #ffffffff, #ffffffff, #ff161a1f, #ff161a1f, #ff000000, ${accent}, #ff161a1f, ${accent}, ${accent}, #ff2d3135, #ff000000, #ff161a1f, #ffffffff, #80ffffff
+disabled_colors=#ff8a8c8f, #ff2d3135, #ff494c50, #ff373a3e, #ff0e1114, #ff32353a, #ff8a8c8f, #ffffffff, #ff8a8c8f, #ff161a1f, #ff161a1f, #ff000000, ${accent}, #ff161a1f, ${accent}, ${accent}, #ff2d3135, #ff000000, #ff161a1f, #ff8a8c8f, #80ffffff
+inactive_colors=#ffffffff, #ff2d3135, #ff494c50, #ff373a3e, #ff0e1114, #ff32353a, #ffffffff, #ffffffff, #ffffffff, #ff161a1f, #ff161a1f, #ff000000, ${accent}, #ff161a1f, ${accent}, ${accent}, #ff2d3135, #ff000000, #ff161a1f, #ffffffff, #80ffffff
+EOF
+}
+
+# The font goes in the Qt format: family, size, the fixed Qt fields, and the style at the end
+make_qt_config() {
+  cat <<EOF
+; Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set.
+[Appearance]
+style=Fusion
+custom_palette=true
+color_scheme_path="${output_dir}/qt6ct-colors.conf"
+icon_theme=Papirus-Dark
+
+[Fonts]
+general="${theme[font]},${system_font_size},-1,5,400,0,0,0,0,0,0,0,0,0,0,1,${theme[font_style]}"
+fixed="IBM Plex Mono,${system_font_size}"
+EOF
+}
+
 generate_theme() {
-  local theme_json hyprland_config gtk_css
+  local theme_json hyprland_config gtk_css qt_palette qt_config
 
   load_theme
   theme_json="$(theme_as_json)"
   hyprland_config="$(make_hyprland_config)"
   gtk_css="$(make_gtk_css)"
+  qt_palette="$(make_qt_palette)"
+  qt_config="$(make_qt_config)"
 
-  install -d -m 0755 -- "${output_dir}"
+  install -d -m 0755 -- "${output_dir}" "${qt_config_dir}"
   write_file "${output_dir}/theme.json" "${theme_json}"
   write_file "${output_dir}/hyprland.conf" "${hyprland_config}"
   write_file "${output_dir}/gtk.css" "${gtk_css}"
+  write_file "${output_dir}/qt6ct-colors.conf" "${qt_palette}"
+  write_file "${qt_config_dir}/qt6ct.conf" "${qt_config}"
 }
 
 # A default value goes back to the system default, so a later change in the package still reaches the user
