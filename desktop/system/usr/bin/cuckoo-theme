@@ -252,8 +252,53 @@ make_swaync_css() {
 EOF
 }
 
+# The terminal font and colors. alacritty.toml imports it and reloads by itself when it changes.
+make_alacritty_config() {
+  cat <<EOF
+# Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set.
+
+# Bold and italic come from the same family
+[font]
+normal = { family = "${theme[terminal_font]}", style = "${theme[terminal_font_style]}" }
+
+# The Cuckoo background and text, with the accent on the cursor and the selection
+[colors.primary]
+background = "#161a1f"
+foreground = "#ffffff"
+
+[colors.cursor]
+text = "#161a1f"
+cursor = "${theme[accent]}"
+
+[colors.selection]
+text = "#161a1f"
+background = "${theme[accent]}"
+
+# The 16 colors of Catppuccin Mocha
+[colors.normal]
+black = "#45475a"
+red = "#f38ba8"
+green = "#a6e3a1"
+yellow = "#f9e2af"
+blue = "#89b4fa"
+magenta = "#f5c2e7"
+cyan = "#94e2d5"
+white = "#bac2de"
+
+[colors.bright]
+black = "#585b70"
+red = "#f38ba8"
+green = "#a6e3a1"
+yellow = "#f9e2af"
+blue = "#89b4fa"
+magenta = "#f5c2e7"
+cyan = "#94e2d5"
+white = "#a6adc8"
+EOF
+}
+
 generate_theme() {
-  local theme_json hyprland_config gtk_css qt_palette qt_config swaync_css
+  local theme_json hyprland_config gtk_css qt_palette qt_config swaync_css alacritty_config
 
   load_theme
   theme_json="$(theme_as_json)"
@@ -262,6 +307,7 @@ generate_theme() {
   qt_palette="$(make_qt_palette)"
   qt_config="$(make_qt_config)"
   swaync_css="$(make_swaync_css)"
+  alacritty_config="$(make_alacritty_config)"
 
   install -d -m 0755 -- "${output_dir}" "${qt_config_dir}"
   write_file "${output_dir}/theme.json" "${theme_json}"
@@ -270,6 +316,7 @@ generate_theme() {
   write_file "${output_dir}/qt6ct-colors.conf" "${qt_palette}"
   write_file "${qt_config_dir}/qt6ct.conf" "${qt_config}"
   write_file "${output_dir}/swaync.css" "${swaync_css}"
+  write_file "${output_dir}/alacritty.toml" "${alacritty_config}"
 }
 
 # A default value goes back to the system default, so a later change in the package still reaches the user

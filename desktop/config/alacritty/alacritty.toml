@@ -1,39 +1,5 @@
 # Alacritty settings for Cuckoo Linux.
 
-# Bold and italic come from the same family
-[font]
-normal = { family = "IBM Plex Mono", style = "Regular" }
-
-# The Cuckoo background and text, with the accent on the cursor and the selection
-[colors.primary]
-background = "#161a1f"
-foreground = "#ffffff"
-
-[colors.cursor]
-text = "#161a1f"
-cursor = "#89b4fa"
-
-[colors.selection]
-text = "#161a1f"
-background = "#89b4fa"
-
-# The 16 colors of Catppuccin Mocha, the same family as the accent, the red and the yellow
-[colors.normal]
-black = "#45475a"
-red = "#f38ba8"
-green = "#a6e3a1"
-yellow = "#f9e2af"
-blue = "#89b4fa"
-magenta = "#f5c2e7"
-cyan = "#94e2d5"
-white = "#bac2de"
-
-[colors.bright]
-black = "#585b70"
-red = "#f38ba8"
-green = "#a6e3a1"
-yellow = "#f9e2af"
-blue = "#89b4fa"
-magenta = "#f5c2e7"
-cyan = "#94e2d5"
-white = "#a6adc8"
+# The font and colors of the theme, made by cuckoo-theme. Settings below this line win.
+[general]
+import = ["~/.config/cuckoo/theme/alacritty.toml"]
