@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Start the Cuckoo desktop, with the theme files ready before Hyprland reads them.
+# If the theme fails, the desktop still starts and the error stays in the journal.
+
+set -euo pipefail
+
+if ! /usr/bin/cuckoo-theme generate; then
+  printf 'WARNING: The theme could not be generated, using the files from the last start.\n' >&2
+fi
+
+exec /usr/bin/start-hyprland

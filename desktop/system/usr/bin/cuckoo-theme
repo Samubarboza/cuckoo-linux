@@ -1,0 +1,404 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Cuckoo theme: joins the default theme with the user choices and writes the file of each program.
+# A user value that is not valid is left out, so a broken theme file never breaks the desktop.
+#
+# Usage:
+#   cuckoo-theme generate           write the files from the default theme and the user choices
+#   cuckoo-theme apply              write the files and reload the running programs
+#   cuckoo-theme set <key> <value>  save one user choice and apply it
+#   cuckoo-theme reset              go back to the default theme and apply it
+
+set -euo pipefail
+
+usage="Usage: cuckoo-theme generate | apply | set <key> <value> | reset"
+
+default_theme_file="/usr/share/cuckoo/theme.json"
+user_config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}"
+config_dir="${user_config_dir}/cuckoo"
+user_theme_file="${config_dir}/theme.json"
+output_dir="${config_dir}/theme"
+# qt6ct only reads this file and needs the full path of the palette, so the theme writes it
+qt_config_dir="${user_config_dir}/qt6ct"
+
+system_font_size=11
+
+font_name_pattern='^[A-Za-z0-9 ._-]+$'
+cursor_name_pattern='^[A-Za-z0-9][A-Za-z0-9._-]*$'
+
+# The final value of each key, in the order of the default theme file, and its default value
+declare -A theme=()
+declare -A default_theme_values=()
+
+fail() {
+  printf 'ERROR: %s\n' "$1" >&2
+  exit 1
+}
+
+warn() {
+  printf 'WARNING: %s\n' "$1" >&2
+}
+
+is_color() {
+  [[ "$1" =~ ^#[0-9a-fA-F]{6}$ ]]
+}
+
+is_whole_number_between() {
+  [[ "$1" =~ ^[0-9]{1,3}$ ]] && ((10#$1 >= $2 && 10#$1 <= $3))
+}
+
+# From 0.10 to 1.00, with two decimals at most
+is_opacity() {
+  [[ "$1" =~ ^(0\.[1-9][0-9]?|1(\.00?)?)$ ]]
+}
+
+is_installed_font() {
+  [[ "$1" =~ ${font_name_pattern} ]] && fc-list --quiet ":family=$1"
+}
+
+is_installed_font_style() {
+  local font_name="$1" font_style="$2"
+  [[ "${font_name}" =~ ${font_name_pattern} && "${font_style}" =~ ${font_name_pattern} ]] \
+    && fc-list --quiet ":family=${font_name}:style=${font_style}"
+}
+
+is_installed_cursor() {
+  local cursor_name="$1" icons_dir
+  [[ "${cursor_name}" =~ ${cursor_name_pattern} ]] || return 1
+
+  for icons_dir in "${XDG_DATA_HOME:-${HOME}/.local/share}/icons" "${HOME}/.icons" /usr/share/icons; do
+    [[ -d "${icons_dir}/${cursor_name}/cursors" ]] && return 0
+  done
+  return 1
+}
+
+# The style is checked against the font already chosen, so the font must come first
+is_valid_value() {
+  local key="$1" value="$2"
+
+  case "${key}" in
+    accent | border_color) is_color "${value}" ;;
+    border_size) is_whole_number_between "${value}" 0 10 ;;
+    rounding) is_whole_number_between "${value}" 0 30 ;;
+    cursor_size) is_whole_number_between "${value}" 16 64 ;;
+    window_opacity | inactive_window_opacity) is_opacity "${value}" ;;
+    font | terminal_font) is_installed_font "${value}" ;;
+    font_style) is_installed_font_style "${theme[font]}" "${value}" ;;
+    terminal_font_style) is_installed_font_style "${theme[terminal_font]}" "${value}" ;;
+    cursor) is_installed_cursor "${value}" ;;
+    *) return 1 ;;
+  esac
+}
+
+read_theme_value() {
+  local theme_json="$1" key="$2"
+  jq -r --arg key "${key}" '.[$key] // empty | tostring' <<<"${theme_json}"
+}
+
+load_theme() {
+  local default_theme user_theme="{}" key user_value
+
+  jq -e 'type == "object"' "${default_theme_file}" &>/dev/null \
+    || fail "'${default_theme_file}' is missing or broken."
+  default_theme="$(<"${default_theme_file}")"
+
+  if [[ -e "${user_theme_file}" ]]; then
+    if jq -e 'type == "object"' "${user_theme_file}" &>/dev/null; then
+      user_theme="$(<"${user_theme_file}")"
+    else
+      warn "'${user_theme_file}' is broken, using the default theme."
+    fi
+  fi
+
+  while IFS= read -r key; do
+    default_theme_values[${key}]="$(read_theme_value "${default_theme}" "${key}")"
+    theme[${key}]="${default_theme_values[${key}]}"
+    user_value="$(read_theme_value "${user_theme}" "${key}")"
+
+    if [[ -z "${user_value}" ]]; then
+      continue
+    elif is_valid_value "${key}" "${user_value}"; then
+      theme[${key}]="${user_value}"
+    else
+      warn "'${user_value}' is not a valid ${key}, using the default."
+    fi
+  done < <(jq -r 'keys_unsorted[]' <<<"${default_theme}")
+}
+
+# The numbers go back as numbers, the same type as in the default theme file
+theme_as_json() {
+  local key named_values=()
+
+  for key in "${!theme[@]}"; do
+    named_values+=(--arg "${key}" "${theme[${key}]}")
+  done
+
+  jq -n --slurpfile default_theme "${default_theme_file}" "${named_values[@]}" \
+    '$default_theme[0] | with_entries(.value = (if (.value | type) == "number"
+      then ($ARGS.named[.key] | tonumber) else $ARGS.named[.key] end))'
+}
+
+# A temporary file in the same folder and then mv, so a program never reads half a file
+write_file() {
+  local target_file="$1" content="$2" temporary_file
+  temporary_file="$(mktemp -- "${target_file}.XXXXXX")"
+
+  if ! printf '%s\n' "${content}" >"${temporary_file}"; then
+    rm -f -- "${temporary_file}"
+    fail "Could not write '${target_file}'."
+  fi
+  mv -f -- "${temporary_file}" "${target_file}"
+}
+
+# The border, corners, opacity and cursor. hyprland.conf loads it after the Cuckoo window style.
+make_hyprland_config() {
+  cat <<EOF
+# Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set.
+
+general {
+    border_size = ${theme[border_size]}
+    col.active_border = rgba(${theme[border_color]#\#}ee)
+}
+
+decoration {
+    rounding = ${theme[rounding]}
+    active_opacity = ${theme[window_opacity]}
+    inactive_opacity = ${theme[inactive_window_opacity]}
+}
+
+env = XCURSOR_THEME,${theme[cursor]}
+env = XCURSOR_SIZE,${theme[cursor_size]}
+env = HYPRCURSOR_THEME,${theme[cursor]}
+env = HYPRCURSOR_SIZE,${theme[cursor_size]}
+EOF
+}
+
+# The libadwaita named colors. gtk-4.0/gtk.css imports it, and gtk-3.0/gtk.css imports that one.
+make_gtk_css() {
+  cat <<EOF
+/* Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set. */
+
+/* One dark background for the whole window */
+@define-color window_bg_color #161a1f;
+@define-color view_bg_color #161a1f;
+@define-color headerbar_bg_color #161a1f;
+@define-color sidebar_bg_color #161a1f;
+@define-color popover_bg_color #161a1f;
+@define-color dialog_bg_color #161a1f;
+
+/* Accent, with dark text so it reads well on a soft color */
+@define-color accent_color ${theme[accent]};
+@define-color accent_bg_color ${theme[accent]};
+@define-color accent_fg_color #161a1f;
+
+/* Red for the actions that delete or remove */
+@define-color destructive_color #f38ba8;
+@define-color destructive_bg_color #f38ba8;
+@define-color destructive_fg_color #161a1f;
+EOF
+}
+
+# The 21 Qt colors in order: text, buttons and borders on the dark background, and the accent
+# for the selection and the links
+make_qt_palette() {
+  local accent="#ff${theme[accent]#\#}"
+
+  cat <<EOF
+; Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set.
+[ColorScheme]
+active_colors=#ffffffff, #ff2d3135, #ff494c50, #ff373a3e, #ff0e1114, #ff32353a, #ffffffff, #ffffffff, #ffffffff, #ff161a1f, #ff161a1f, #ff000000, ${accent}, #ff161a1f, ${accent}, ${accent}, #ff2d3135, #ff000000, #ff161a1f, #ffffffff, #80ffffff
+disabled_colors=#ff8a8c8f, #ff2d3135, #ff494c50, #ff373a3e, #ff0e1114, #ff32353a, #ff8a8c8f, #ffffffff, #ff8a8c8f, #ff161a1f, #ff161a1f, #ff000000, ${accent}, #ff161a1f, ${accent}, ${accent}, #ff2d3135, #ff000000, #ff161a1f, #ff8a8c8f, #80ffffff
+inactive_colors=#ffffffff, #ff2d3135, #ff494c50, #ff373a3e, #ff0e1114, #ff32353a, #ffffffff, #ffffffff, #ffffffff, #ff161a1f, #ff161a1f, #ff000000, ${accent}, #ff161a1f, ${accent}, ${accent}, #ff2d3135, #ff000000, #ff161a1f, #ffffffff, #80ffffff
+EOF
+}
+
+# The font goes in the Qt format: family, size, the fixed Qt fields, and the style at the end
+make_qt_config() {
+  cat <<EOF
+; Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set.
+[Appearance]
+style=Fusion
+custom_palette=true
+color_scheme_path="${output_dir}/qt6ct-colors.conf"
+icon_theme=Papirus-Dark
+
+[Fonts]
+general="${theme[font]},${system_font_size},-1,5,400,0,0,0,0,0,0,0,0,0,0,1,${theme[font_style]}"
+fixed="IBM Plex Mono,${system_font_size}"
+EOF
+}
+
+# The colors of the notifications. swaync loads its own style first, this only changes its variables.
+make_swaync_css() {
+  cat <<EOF
+/* Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set. */
+:root {
+  --cc-bg: rgba(22, 26, 31, 0.90);
+  --noti-bg: 22, 26, 31;
+  --noti-bg-alpha: 0.90;
+  --noti-bg-darker: rgb(22, 26, 31);
+  --noti-border-color: rgba(255, 255, 255, 0.12);
+  --noti-bg-hover: rgba(255, 255, 255, 0.14);
+  --noti-bg-focus: rgba(255, 255, 255, 0.10);
+  --noti-close-bg: rgba(255, 255, 255, 0.14);
+  --noti-close-bg-hover: rgba(255, 255, 255, 0.22);
+  --text-color: #ffffff;
+  --text-color-disabled: rgba(255, 255, 255, 0.50);
+  --bg-selected: ${theme[accent]};
+  --border-radius: 14px;
+}
+EOF
+}
+
+# The terminal font and colors. alacritty.toml imports it and reloads by itself when it changes.
+make_alacritty_config() {
+  cat <<EOF
+# Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set.
+
+# Bold and italic come from the same family
+[font]
+normal = { family = "${theme[terminal_font]}", style = "${theme[terminal_font_style]}" }
+
+# The Cuckoo background and text, with the accent on the cursor and the selection
+[colors.primary]
+background = "#161a1f"
+foreground = "#ffffff"
+
+[colors.cursor]
+text = "#161a1f"
+cursor = "${theme[accent]}"
+
+[colors.selection]
+text = "#161a1f"
+background = "${theme[accent]}"
+
+# The 16 colors of Catppuccin Mocha
+[colors.normal]
+black = "#45475a"
+red = "#f38ba8"
+green = "#a6e3a1"
+yellow = "#f9e2af"
+blue = "#89b4fa"
+magenta = "#f5c2e7"
+cyan = "#94e2d5"
+white = "#bac2de"
+
+[colors.bright]
+black = "#585b70"
+red = "#f38ba8"
+green = "#a6e3a1"
+yellow = "#f9e2af"
+blue = "#89b4fa"
+magenta = "#f5c2e7"
+cyan = "#94e2d5"
+white = "#a6adc8"
+EOF
+}
+
+# The lock screen font and accent. hyprlock.conf loads it and reads it again on every lock.
+make_hyprlock_config() {
+  cat <<EOF
+# Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set.
+\$font = ${theme[font]}
+\$accent = rgb(${theme[accent]#\#})
+EOF
+}
+
+generate_theme() {
+  local theme_json hyprland_config gtk_css qt_palette qt_config swaync_css alacritty_config hyprlock_config
+
+  load_theme
+  theme_json="$(theme_as_json)"
+  hyprland_config="$(make_hyprland_config)"
+  gtk_css="$(make_gtk_css)"
+  qt_palette="$(make_qt_palette)"
+  qt_config="$(make_qt_config)"
+  swaync_css="$(make_swaync_css)"
+  alacritty_config="$(make_alacritty_config)"
+  hyprlock_config="$(make_hyprlock_config)"
+
+  install -d -m 0755 -- "${output_dir}" "${qt_config_dir}"
+  write_file "${output_dir}/theme.json" "${theme_json}"
+  write_file "${output_dir}/hyprland.conf" "${hyprland_config}"
+  write_file "${output_dir}/gtk.css" "${gtk_css}"
+  write_file "${output_dir}/qt6ct-colors.conf" "${qt_palette}"
+  write_file "${qt_config_dir}/qt6ct.conf" "${qt_config}"
+  write_file "${output_dir}/swaync.css" "${swaync_css}"
+  write_file "${output_dir}/alacritty.toml" "${alacritty_config}"
+  write_file "${output_dir}/hyprlock.conf" "${hyprlock_config}"
+}
+
+# A default value goes back to the system default, so a later change in the package still reaches the user
+set_or_reset_gsetting() {
+  local gsettings_key="$1" value="$2" default_value="$3"
+
+  if [[ "${value}" == "${default_value}" ]]; then
+    gsettings reset org.gnome.desktop.interface "${gsettings_key}"
+  else
+    gsettings set org.gnome.desktop.interface "${gsettings_key}" "${value}"
+  fi
+}
+
+# The font and the cursor of the gtk apps
+update_gsettings() {
+  set_or_reset_gsetting font-name \
+    "${theme[font]} ${theme[font_style]} ${system_font_size}" \
+    "${default_theme_values[font]} ${default_theme_values[font_style]} ${system_font_size}"
+  set_or_reset_gsetting cursor-theme "${theme[cursor]}" "${default_theme_values[cursor]}"
+  set_or_reset_gsetting cursor-size "${theme[cursor_size]}" "${default_theme_values[cursor_size]}"
+}
+
+# Outside a running Hyprland there is nothing to reload. A failed reload is not fatal:
+# the files are already written and the next start uses them.
+reload_programs() {
+  [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] || return 0
+
+  hyprctl reload >/dev/null || warn "Hyprland could not reload the theme."
+  hyprctl setcursor "${theme[cursor]}" "${theme[cursor_size]}" >/dev/null \
+    || warn "Hyprland could not change the cursor."
+  update_gsettings || warn "Could not save the font and the cursor in gsettings."
+  swaync-client --reload-css >/dev/null || warn "The notifications could not reload the theme."
+}
+
+apply_theme() {
+  generate_theme
+  reload_programs
+}
+
+# The user file keeps only what is different from the default theme
+set_theme_value() {
+  local key="$1" value="$2" user_theme="{}" updated_theme
+
+  jq -e --arg key "${key}" 'has($key)' "${default_theme_file}" &>/dev/null \
+    || fail "'${key}' is not a theme key."
+  load_theme
+  is_valid_value "${key}" "${value}" || fail "'${value}' is not a valid ${key}."
+
+  if jq -e 'type == "object"' "${user_theme_file}" &>/dev/null; then
+    user_theme="$(<"${user_theme_file}")"
+  fi
+
+  updated_theme="$(jq --arg key "${key}" --arg value "${value}" --slurpfile default_theme "${default_theme_file}" \
+    '$default_theme[0][$key] as $default_value
+      | (if ($default_value | type) == "number" then ($value | tonumber) else $value end) as $new_value
+      | if $new_value == $default_value then del(.[$key]) else .[$key] = $new_value end' <<<"${user_theme}")"
+
+  install -d -m 0755 -- "${config_dir}"
+  write_file "${user_theme_file}" "${updated_theme}"
+  apply_theme
+}
+
+reset_theme() {
+  rm -f -- "${user_theme_file}"
+  apply_theme
+}
+
+case "${1:-} $#" in
+  "generate 1") generate_theme ;;
+  "apply 1") apply_theme ;;
+  "set 3") set_theme_value "$2" "$3" ;;
+  "reset 1") reset_theme ;;
+  *) fail "${usage}" ;;
+esac
