@@ -3,6 +3,6 @@
 [Desktop Entry]
 Name=Cuckoo
 Comment=Hyprland for Cuckoo Linux
-Exec=systemd-cat --identifier=hyprland /usr/bin/start-hyprland
+Exec=systemd-cat --identifier=hyprland /usr/bin/cuckoo-session
 Type=Application
 DesktopNames=Hyprland
