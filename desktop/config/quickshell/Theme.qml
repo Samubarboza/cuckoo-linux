@@ -1,16 +1,40 @@
 pragma Singleton
 
 import Quickshell
+import Quickshell.Io
 import QtQuick
 
 // One source of truth for the bar look: sizes, fonts and colors.
+// The accent and the font come from the theme, so they change live with cuckoo-theme.
 Singleton {
+  // The theme made by cuckoo-theme. Until that file exists, the default theme of the package.
+  FileView {
+    path: Quickshell.env("HOME") + "/.config/cuckoo/theme/theme.json"
+    blockLoading: true
+    watchChanges: true
+    onFileChanged: reload()
+    JsonAdapter {
+      id: chosenTheme
+      property string accent
+      property string font
+    }
+  }
+  FileView {
+    path: "/usr/share/cuckoo/theme.json"
+    blockLoading: true
+    JsonAdapter {
+      id: defaultTheme
+      property string accent
+      property string font
+    }
+  }
+
   // Sizes
   readonly property int barHeight: 30
   readonly property int cornerRadius: 7
 
   // Fonts
-  readonly property string fontFamily: "IBM Plex Sans"
+  readonly property string fontFamily: chosenTheme.font || defaultTheme.font
   readonly property string iconFont: "JetBrainsMono Nerd Font Propo"
   readonly property int fontSize: 13
   readonly property int fontWeight: Font.Medium
@@ -27,7 +51,7 @@ Singleton {
   readonly property color glass: Qt.rgba(1, 1, 1, 0.22)
 
   // Accent and alerts: soft colors from one family. The soft and line versions follow their color
-  readonly property color accent: "#89b4fa"
+  readonly property color accent: chosenTheme.accent || defaultTheme.accent
   readonly property color accentSoft: Qt.rgba(accent.r, accent.g, accent.b, 0.12)
   readonly property color accentLine: Qt.rgba(accent.r, accent.g, accent.b, 0.22)
   readonly property color red: "#f38ba8"
