@@ -7,6 +7,8 @@ ShellRoot {
   Launcher {}
   // One power menu too, it opens on the screen with the focus
   PowerMenu {}
+  // One theme panel too, it opens on the screen with the focus
+  ThemePanel {}
 
   Variants {
     model: Quickshell.screens
