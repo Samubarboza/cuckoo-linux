@@ -60,6 +60,8 @@ Singleton {
   readonly property color redSoft: Qt.rgba(red.r, red.g, red.b, 0.12)
   readonly property color redLine: Qt.rgba(red.r, red.g, red.b, 0.22)
   readonly property color amber: "#f9e2af"
+  // The colors to pick in the theme panel, from Catppuccin Mocha. Red and yellow are left out, they are the alerts
+  readonly property var paletteColors: ["#89b4fa", "#74c7ec", "#94e2d5", "#a6e3a1", "#fab387", "#f5c2e7", "#cba6f7", "#b4befe"]
 
   // Bar background, dark glass from top to bottom
   readonly property color barTop: Qt.rgba(0, 0, 0, 0.28)
