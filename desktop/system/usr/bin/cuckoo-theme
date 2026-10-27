@@ -395,6 +395,17 @@ reset_theme() {
   apply_theme
 }
 
+# One change at a time, so two quick changes never write the user file at the same time.
+# The lock is freed when the script ends.
+lock_theme() {
+  local lock_fd
+  install -d -m 0755 -- "${config_dir}"
+  exec {lock_fd}>"${config_dir}/theme.lock"
+  flock "${lock_fd}"
+}
+
+lock_theme
+
 case "${1:-} $#" in
   "generate 1") generate_theme ;;
   "apply 1") apply_theme ;;

@@ -29,7 +29,8 @@ depends=('quickshell' 'swaync'                       # the bar with its popups, 
          'xdg-user-dirs'                             # the home folders, named in the user language
          'grim' 'slurp'                              # the screenshot key
          'starship' 'atuin' 'bash-preexec'           # the bash prompt and history
-         'jq')                                       # reads the theme files
+         'jq'                                        # reads the theme files
+         'util-linux')                               # flock, one theme change at a time
 
 # config goes to /etc/skel, the folder every new user starts with.
 # system goes to the root of the disk.
