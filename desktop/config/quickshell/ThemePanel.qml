@@ -16,6 +16,7 @@ PanelWindow {
   // The mouse and the arrows move the same selection
   property int selectedIndex: 0
   readonly property string selectedSection: sections[selectedIndex]
+  property bool isConfirmingReset: false
 
   implicitWidth: panelWidth
   implicitHeight: panelHeight
@@ -136,6 +137,39 @@ PanelWindow {
       }
     }
 
+    // Reset, at the bottom of the sections. The first click asks to confirm,
+    // so one click by mistake changes nothing
+    Rectangle {
+      anchors.left: sectionList.left
+      anchors.right: sectionList.right
+      anchors.bottom: sectionList.bottom
+      height: 40
+      radius: Theme.themePanelSectionRadius
+      color: root.isConfirmingReset ? Theme.redSoft : resetHover.hovered ? Theme.selected : "transparent"
+      border.width: 1
+      border.color: root.isConfirmingReset ? Theme.redLine : "transparent"
+
+      Text {
+        anchors.left: parent.left
+        anchors.leftMargin: 14
+        anchors.verticalCenter: parent.verticalCenter
+        text: Language.text(root.isConfirmingReset ? "confirmReset" : "reset")
+        color: root.isConfirmingReset ? Theme.red : Theme.soft
+        font.family: Theme.fontFamily; font.pixelSize: 14
+        font.weight: root.isConfirmingReset ? Font.DemiBold : Font.Medium
+      }
+
+      HoverHandler { id: resetHover }
+      TapHandler { onTapped: root.pressReset() }
+    }
+
+    // Without a second click, the button goes back to Reset
+    Timer {
+      id: resetConfirmTimer
+      interval: 3000
+      onTriggered: root.isConfirmingReset = false
+    }
+
     // Line between the sections and the content
     Rectangle {
       id: divider
@@ -205,6 +239,19 @@ PanelWindow {
   }
   function close() {
     shown = false;
+    isConfirmingReset = false;
+  }
+
+  // The sliders and the palettes read the theme, so they go back by themselves
+  function pressReset() {
+    if (!isConfirmingReset) {
+      isConfirmingReset = true;
+      resetConfirmTimer.restart();
+      return;
+    }
+    isConfirmingReset = false;
+    resetConfirmTimer.stop();
+    Quickshell.execDetached(["cuckoo-theme", "reset"]);
   }
   function toggle() {
     if (shown) close();
