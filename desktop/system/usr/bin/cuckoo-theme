@@ -230,14 +230,15 @@ fixed="IBM Plex Mono,${system_font_size}"
 EOF
 }
 
-# The colors of the notifications. swaync loads its own style first, this only changes its variables.
+# The colors of the notifications, with the same opacity as the windows.
+# swaync loads its own style first, this only changes its variables.
 make_swaync_css() {
   cat <<EOF
 /* Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set. */
 :root {
-  --cc-bg: rgba(22, 26, 31, 0.90);
+  --cc-bg: rgba(22, 26, 31, ${theme[window_opacity]});
   --noti-bg: 22, 26, 31;
-  --noti-bg-alpha: 0.90;
+  --noti-bg-alpha: ${theme[window_opacity]};
   --noti-bg-darker: rgb(22, 26, 31);
   --noti-border-color: rgba(255, 255, 255, 0.12);
   --noti-bg-hover: rgba(255, 255, 255, 0.14);
