@@ -5,7 +5,7 @@ import Quickshell.Io
 import QtQuick
 
 // One source of truth for the bar look: sizes, fonts and colors.
-// The accent and the font come from the theme, so they change live with cuckoo-theme.
+// The accent, the font and the opacity come from the theme, so they change live with cuckoo-theme.
 Singleton {
   // The theme made by cuckoo-theme. Until that file exists, the default theme of the package.
   FileView {
@@ -17,6 +17,7 @@ Singleton {
       id: chosenTheme
       property string accent
       property string font
+      property real window_opacity
     }
   }
   FileView {
@@ -26,6 +27,7 @@ Singleton {
       id: defaultTheme
       property string accent
       property string font
+      property real window_opacity
     }
   }
 
@@ -65,8 +67,9 @@ Singleton {
 
   // One dark background for every card: popups, launcher and power menu
   readonly property color background: "#161a1f"
-  readonly property real backgroundOpacity: 0.90
-  readonly property color card: Qt.rgba(background.r, background.g, background.b, backgroundOpacity)
+  // The same opacity as the windows, from the theme
+  readonly property real windowOpacity: chosenTheme.window_opacity || defaultTheme.window_opacity
+  readonly property color card: Qt.rgba(background.r, background.g, background.b, windowOpacity)
   // The bar popups start transparent on top, so they come out of the bar
   readonly property color cardTransparent: Qt.rgba(background.r, background.g, background.b, 0)
   readonly property int cardRadius: 14
