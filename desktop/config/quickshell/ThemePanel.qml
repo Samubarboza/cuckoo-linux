@@ -48,6 +48,39 @@ PanelWindow {
     Behavior on opacity {
       NumberAnimation { id: fade; duration: 220; easing.type: Easing.OutCubic }
     }
+
+    // Title on the left, close button on the right
+    Item {
+      id: header
+      anchors.top: parent.top
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.margins: 24
+      height: 28
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: Language.text("appearance")
+        color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 16; font.weight: Font.DemiBold
+      }
+
+      Rectangle {
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        width: 28; height: 28
+        radius: Theme.cornerRadius
+        color: closeHover.hovered ? Theme.hover : "transparent"
+
+        Text {
+          anchors.centerIn: parent
+          text: String.fromCodePoint(0xf0156)
+          color: Theme.text; font.family: Theme.iconFont; font.pixelSize: 16
+        }
+
+        HoverHandler { id: closeHover }
+        TapHandler { onTapped: root.close() }
+      }
+    }
   }
 
   // Open on the screen that has the focus
