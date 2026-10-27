@@ -167,6 +167,11 @@ PanelWindow {
         visible: root.selectedSection === "colors"
       }
 
+      ThemeFontsSection {
+        width: parent.width
+        visible: root.selectedSection === "fonts"
+      }
+
       ThemeWindowsSection {
         width: parent.width
         visible: root.selectedSection === "windows"

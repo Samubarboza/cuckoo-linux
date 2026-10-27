@@ -17,6 +17,9 @@ Singleton {
       id: chosenTheme
       property string accent
       property string font
+      property string font_style
+      property string terminal_font
+      property string terminal_font_style
       property real window_opacity
       // -1 until the file is read, because 0 is a real value: no border, square corners
       property int border_size: -1
@@ -31,6 +34,9 @@ Singleton {
       id: defaultTheme
       property string accent
       property string font
+      property string font_style
+      property string terminal_font
+      property string terminal_font_style
       property real window_opacity
       property int border_size
       property string border_color
@@ -44,6 +50,10 @@ Singleton {
 
   // Fonts
   readonly property string fontFamily: chosenTheme.font || defaultTheme.font
+  // The bar only takes the family. The style and the terminal font are for the theme panel
+  readonly property string fontStyle: chosenTheme.font_style || defaultTheme.font_style
+  readonly property string terminalFont: chosenTheme.terminal_font || defaultTheme.terminal_font
+  readonly property string terminalFontStyle: chosenTheme.terminal_font_style || defaultTheme.terminal_font_style
   readonly property string iconFont: "JetBrainsMono Nerd Font Propo"
   readonly property int fontSize: 13
   readonly property int fontWeight: Font.Medium
