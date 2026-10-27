@@ -76,6 +76,9 @@ Singleton {
   readonly property int launcherFieldRadius: 12
   readonly property int launcherCellRadius: 14
 
+  // Theme panel, the same shape as the launcher
+  readonly property int themePanelRadius: launcherRadius
+
   // Power menu
   readonly property int powerMenuRadius: 20
   readonly property int powerButtonRadius: 15
