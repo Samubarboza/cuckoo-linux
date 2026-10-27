@@ -5,7 +5,7 @@ import Quickshell.Io
 import QtQuick
 
 // One source of truth for the bar look: sizes, fonts and colors.
-// The accent, the font and the opacity come from the theme, so they change live with cuckoo-theme.
+// The accent, the font, the opacity and the border come from the theme, so they change live with cuckoo-theme.
 Singleton {
   // The theme made by cuckoo-theme. Until that file exists, the default theme of the package.
   FileView {
@@ -18,6 +18,9 @@ Singleton {
       property string accent
       property string font
       property real window_opacity
+      // -1 until the file is read, because 0 is a real size: no border
+      property int border_size: -1
+      property string border_color
     }
   }
   FileView {
@@ -28,6 +31,8 @@ Singleton {
       property string accent
       property string font
       property real window_opacity
+      property int border_size
+      property string border_color
     }
   }
 
@@ -75,6 +80,11 @@ Singleton {
   // The bar popups start transparent on top, so they come out of the bar
   readonly property color cardTransparent: Qt.rgba(background.r, background.g, background.b, 0)
   readonly property int cardRadius: 14
+
+  // Window border, from the theme. Hyprland draws it, the theme panel shows it
+  readonly property int borderSize: chosenTheme.border_size >= 0 ? chosenTheme.border_size : defaultTheme.border_size
+  readonly property int defaultBorderSize: defaultTheme.border_size
+  readonly property color borderColor: chosenTheme.border_color || defaultTheme.border_color
 
   // App launcher
   readonly property int launcherRadius: 18
