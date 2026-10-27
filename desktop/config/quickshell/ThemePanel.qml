@@ -9,7 +9,12 @@ PanelWindow {
 
   readonly property int panelWidth: 720
   readonly property int panelHeight: 460
+  readonly property int sectionListWidth: 180
+  // The id names the text in Language.qml
+  readonly property var sections: ["colors", "fonts", "windows", "cursor"]
   property bool shown: false
+  // The mouse and the arrows move the same selection
+  property int selectedIndex: 0
 
   implicitWidth: panelWidth
   implicitHeight: panelHeight
@@ -44,6 +49,8 @@ PanelWindow {
     opacity: root.shown ? 1 : 0
     focus: true
     Keys.onEscapePressed: root.close()
+    Keys.onUpPressed: root.selectedIndex = (root.selectedIndex + root.sections.length - 1) % root.sections.length
+    Keys.onDownPressed: root.selectedIndex = (root.selectedIndex + 1) % root.sections.length
 
     Behavior on opacity {
       NumberAnimation { id: fade; duration: 220; easing.type: Easing.OutCubic }
@@ -81,12 +88,80 @@ PanelWindow {
         TapHandler { onTapped: root.close() }
       }
     }
+
+    // One row for each section, on the left
+    Column {
+      id: sectionList
+      anchors.top: header.bottom
+      anchors.left: parent.left
+      anchors.bottom: parent.bottom
+      anchors.topMargin: 20
+      anchors.leftMargin: 24
+      anchors.bottomMargin: 24
+      width: root.sectionListWidth
+      spacing: 4
+
+      Repeater {
+        model: root.sections
+        delegate: Rectangle {
+          required property string modelData
+          required property int index
+          readonly property bool highlighted: index === root.selectedIndex
+          width: parent.width
+          height: 40
+          radius: Theme.themePanelSectionRadius
+          color: highlighted || sectionHover.hovered ? Theme.selected : "transparent"
+          border.width: 1
+          border.color: highlighted ? Theme.accentLine : "transparent"
+
+          Text {
+            anchors.left: parent.left
+            anchors.leftMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            text: Language.text(modelData)
+            color: highlighted ? Theme.accent : Theme.soft
+            font.family: Theme.fontFamily; font.pixelSize: 14
+            font.weight: highlighted ? Font.DemiBold : Font.Medium
+          }
+
+          HoverHandler { id: sectionHover }
+          TapHandler { onTapped: root.selectedIndex = index }
+        }
+      }
+    }
+
+    // Line between the sections and the content
+    Rectangle {
+      id: divider
+      anchors.top: sectionList.top
+      anchors.bottom: sectionList.bottom
+      anchors.left: sectionList.right
+      anchors.leftMargin: 16
+      width: 1
+      color: Theme.line
+    }
+
+    // The content of the chosen section
+    Item {
+      anchors.top: sectionList.top
+      anchors.bottom: sectionList.bottom
+      anchors.left: divider.right
+      anchors.right: parent.right
+      anchors.leftMargin: 24
+      anchors.rightMargin: 24
+
+      Text {
+        text: Language.text(root.sections[root.selectedIndex])
+        color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 15; font.weight: Font.DemiBold
+      }
+    }
   }
 
-  // Open on the screen that has the focus
+  // Open on the screen that has the focus, on the first section
   function open() {
     var focusedName = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
     screen = Quickshell.screens.find(s => s.name === focusedName) || Quickshell.screens[0];
+    selectedIndex = 0;
     shown = true;
     card.forceActiveFocus();
   }
