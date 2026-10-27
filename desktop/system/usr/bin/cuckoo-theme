@@ -6,14 +6,14 @@
 # A user value that is not valid is left out, so a broken theme file never breaks the desktop.
 #
 # Usage:
-#   cuckoo-theme generate           write the files from the default theme and the user choices
-#   cuckoo-theme apply              write the files and reload the running programs
-#   cuckoo-theme set <key> <value>  save one user choice and apply it
-#   cuckoo-theme reset              go back to the default theme and apply it
+#   cuckoo-theme generate              write the files from the default theme and the user choices
+#   cuckoo-theme apply                 write the files and reload the running programs
+#   cuckoo-theme set <key> <value>...  save one or more user choices and apply them once
+#   cuckoo-theme reset                 go back to the default theme and apply it
 
 set -euo pipefail
 
-usage="Usage: cuckoo-theme generate | apply | set <key> <value> | reset"
+usage="Usage: cuckoo-theme generate | apply | set <key> <value> [<key> <value>...] | reset"
 
 default_theme_file="/usr/share/cuckoo/theme.json"
 user_config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}"
@@ -368,25 +368,36 @@ apply_theme() {
 }
 
 # The user file keeps only what is different from the default theme
-set_theme_value() {
-  local key="$1" value="$2" user_theme="{}" updated_theme
+with_user_value() {
+  local user_theme="$1" key="$2" value="$3"
 
-  jq -e --arg key "${key}" 'has($key)' "${default_theme_file}" &>/dev/null \
-    || fail "'${key}' is not a theme key."
+  jq --arg key "${key}" --arg value "${value}" --slurpfile default_theme "${default_theme_file}" \
+    '$default_theme[0][$key] as $default_value
+      | (if ($default_value | type) == "number" then ($value | tonumber) else $value end) as $new_value
+      | if $new_value == $default_value then del(.[$key]) else .[$key] = $new_value end' <<<"${user_theme}"
+}
+
+# Every pair is checked before the user file is saved, so a bad value saves nothing.
+# A checked value goes into the theme, so a style is checked against a font set in the same call.
+set_theme_values() {
+  local key value user_theme="{}"
+
   load_theme
-  is_valid_value "${key}" "${value}" || fail "'${value}' is not a valid ${key}."
-
   if jq -e 'type == "object"' "${user_theme_file}" &>/dev/null; then
     user_theme="$(<"${user_theme_file}")"
   fi
 
-  updated_theme="$(jq --arg key "${key}" --arg value "${value}" --slurpfile default_theme "${default_theme_file}" \
-    '$default_theme[0][$key] as $default_value
-      | (if ($default_value | type) == "number" then ($value | tonumber) else $value end) as $new_value
-      | if $new_value == $default_value then del(.[$key]) else .[$key] = $new_value end' <<<"${user_theme}")"
+  while (($# > 0)); do
+    key="$1" value="$2"
+    shift 2
+    jq -e --arg key "${key}" 'has($key)' "${default_theme_file}" &>/dev/null \
+      || fail "'${key}' is not a theme key."
+    is_valid_value "${key}" "${value}" || fail "'${value}' is not a valid ${key}."
+    theme[${key}]="${value}"
+    user_theme="$(with_user_value "${user_theme}" "${key}" "${value}")"
+  done
 
-  install -d -m 0755 -- "${config_dir}"
-  write_file "${user_theme_file}" "${updated_theme}"
+  write_file "${user_theme_file}" "${user_theme}"
   apply_theme
 }
 
@@ -409,7 +420,10 @@ lock_theme
 case "${1:-} $#" in
   "generate 1") generate_theme ;;
   "apply 1") apply_theme ;;
-  "set 3") set_theme_value "$2" "$3" ;;
+  "set "*)
+    (($# >= 3 && $# % 2 == 1)) || fail "${usage}"
+    set_theme_values "${@:2}"
+    ;;
   "reset 1") reset_theme ;;
   *) fail "${usage}" ;;
 esac
