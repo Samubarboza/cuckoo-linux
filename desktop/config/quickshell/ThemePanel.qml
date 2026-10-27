@@ -15,6 +15,7 @@ PanelWindow {
   property bool shown: false
   // The mouse and the arrows move the same selection
   property int selectedIndex: 0
+  readonly property string selectedSection: sections[selectedIndex]
 
   implicitWidth: panelWidth
   implicitHeight: panelHeight
@@ -142,17 +143,22 @@ PanelWindow {
     }
 
     // The content of the chosen section
-    Item {
+    Column {
       anchors.top: sectionList.top
-      anchors.bottom: sectionList.bottom
       anchors.left: divider.right
       anchors.right: parent.right
       anchors.leftMargin: 24
       anchors.rightMargin: 24
+      spacing: 20
 
       Text {
-        text: Language.text(root.sections[root.selectedIndex])
+        text: Language.text(root.selectedSection)
         color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 15; font.weight: Font.DemiBold
+      }
+
+      ThemeColorsSection {
+        width: parent.width
+        visible: root.selectedSection === "colors"
       }
     }
   }

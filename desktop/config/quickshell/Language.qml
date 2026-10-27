@@ -6,8 +6,8 @@ import QtQuick
 // The desktop texts, in the system language.
 Singleton {
   readonly property var textsByLanguage: ({
-    en: { suspend: "Suspend", lock: "Lock", logout: "Log out", reboot: "Restart", shutdown: "Shut down", appearance: "Appearance", colors: "Colors", fonts: "Fonts", windows: "Windows", cursor: "Cursor" },
-    es: { suspend: "Suspender", lock: "Bloquear", logout: "Cerrar sesión", reboot: "Reiniciar", shutdown: "Apagar", appearance: "Apariencia", colors: "Colores", fonts: "Fuentes", windows: "Ventanas", cursor: "Cursor" }
+    en: { suspend: "Suspend", lock: "Lock", logout: "Log out", reboot: "Restart", shutdown: "Shut down", appearance: "Appearance", colors: "Colors", fonts: "Fonts", windows: "Windows", cursor: "Cursor", accent: "Theme color" },
+    es: { suspend: "Suspender", lock: "Bloquear", logout: "Cerrar sesión", reboot: "Reiniciar", shutdown: "Apagar", appearance: "Apariencia", colors: "Colores", fonts: "Fuentes", windows: "Ventanas", cursor: "Cursor", accent: "Color del tema" }
   })
 
   // es_AR gives es. A language without texts falls back to English
