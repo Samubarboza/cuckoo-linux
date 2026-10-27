@@ -5,7 +5,7 @@ import Quickshell.Io
 import QtQuick
 
 // One source of truth for the bar look: sizes, fonts and colors.
-// The accent, the font and the opacity come from the theme, so they change live with cuckoo-theme.
+// The accent, the font, the opacity, the border and the corners come from the theme, so they change live with cuckoo-theme.
 Singleton {
   // The theme made by cuckoo-theme. Until that file exists, the default theme of the package.
   FileView {
@@ -18,6 +18,10 @@ Singleton {
       property string accent
       property string font
       property real window_opacity
+      // -1 until the file is read, because 0 is a real value: no border, square corners
+      property int border_size: -1
+      property string border_color
+      property int rounding: -1
     }
   }
   FileView {
@@ -28,6 +32,9 @@ Singleton {
       property string accent
       property string font
       property real window_opacity
+      property int border_size
+      property string border_color
+      property int rounding
     }
   }
 
@@ -60,6 +67,8 @@ Singleton {
   readonly property color redSoft: Qt.rgba(red.r, red.g, red.b, 0.12)
   readonly property color redLine: Qt.rgba(red.r, red.g, red.b, 0.22)
   readonly property color amber: "#f9e2af"
+  // The colors to pick in the theme panel, from Catppuccin Mocha. Red and yellow are left out, they are the alerts
+  readonly property var paletteColors: ["#89b4fa", "#74c7ec", "#94e2d5", "#a6e3a1", "#fab387", "#f5c2e7", "#cba6f7", "#b4befe"]
 
   // Bar background, dark glass from top to bottom
   readonly property color barTop: Qt.rgba(0, 0, 0, 0.28)
@@ -73,6 +82,12 @@ Singleton {
   // The bar popups start transparent on top, so they come out of the bar
   readonly property color cardTransparent: Qt.rgba(background.r, background.g, background.b, 0)
   readonly property int cardRadius: 14
+
+  // Window border and corners, from the theme. Hyprland draws them, the theme panel shows them
+  readonly property int borderSize: chosenTheme.border_size >= 0 ? chosenTheme.border_size : defaultTheme.border_size
+  readonly property int defaultBorderSize: defaultTheme.border_size
+  readonly property color borderColor: chosenTheme.border_color || defaultTheme.border_color
+  readonly property int windowRounding: chosenTheme.rounding >= 0 ? chosenTheme.rounding : defaultTheme.rounding
 
   // App launcher
   readonly property int launcherRadius: 18
