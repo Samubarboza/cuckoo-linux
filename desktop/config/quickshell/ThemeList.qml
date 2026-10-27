@@ -11,6 +11,7 @@ ListView {
   property string chosenValue
   // No mouse seen yet, since the list showed up
   property point lastMousePoint: Qt.point(-1, -1)
+  property bool isMakingRows: true
   signal highlighted(string value)
   signal picked(string value)
 
@@ -55,13 +56,18 @@ ListView {
   Keys.onReturnPressed: pickCurrent()
   Keys.onEnterPressed: pickCurrent()
 
-  onCurrentIndexChanged: if (hasRow(currentIndex)) highlighted(model[currentIndex].value)
-  // The list moves the highlight back to the first row while it makes the rows,
-  // so the chosen row is shown once it is done
-  onCountChanged: Qt.callLater(showChosen)
-  onModelChanged: Qt.callLater(showChosen)
+  // The list moves the highlight to the first row by itself while it makes the rows. That is not told,
+  // and the chosen row is shown once it is done
+  onCurrentIndexChanged: if (!isMakingRows && hasRow(currentIndex)) highlighted(model[currentIndex].value)
+  onCountChanged: waitForRows()
+  onModelChanged: waitForRows()
   onChosenValueChanged: Qt.callLater(showChosen)
-  onVisibleChanged: lastMousePoint = Qt.point(-1, -1)
+  // A list that shows up again starts on the chosen row. The same list given again does not
+  // change the model, so this is the only way it knows
+  onVisibleChanged: {
+    lastMousePoint = Qt.point(-1, -1);
+    if (visible) showChosen();
+  }
 
   function hasRow(rowIndex) {
     return rowIndex >= 0 && rowIndex < count;
@@ -75,9 +81,15 @@ ListView {
     if (hasMoved) currentIndex = rowIndex;
   }
 
+  function waitForRows() {
+    isMakingRows = true;
+    Qt.callLater(showChosen);
+  }
+
   // Start on the chosen row, or on the first one when it is not in the list
   function showChosen() {
     if (count === 0) return;
+    isMakingRows = false;
     currentIndex = Math.max(0, model.findIndex(entry => entry.value === chosenValue));
     positionViewAtIndex(currentIndex, ListView.Center);
   }

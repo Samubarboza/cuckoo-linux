@@ -5,7 +5,7 @@ import Quickshell.Io
 import QtQuick
 
 // One source of truth for the bar look: sizes, fonts and colors.
-// The accent, the font, the opacity, the border and the corners come from the theme, so they change live with cuckoo-theme.
+// The accent, the fonts, the opacity, the border, the corners and the cursor come from the theme, so they change live with cuckoo-theme.
 Singleton {
   // The theme made by cuckoo-theme. Until that file exists, the default theme of the package.
   FileView {
@@ -25,6 +25,8 @@ Singleton {
       property int border_size: -1
       property string border_color
       property int rounding: -1
+      property string cursor
+      property int cursor_size
     }
   }
   FileView {
@@ -41,6 +43,8 @@ Singleton {
       property int border_size
       property string border_color
       property int rounding
+      property string cursor
+      property int cursor_size
     }
   }
 
@@ -98,6 +102,10 @@ Singleton {
   readonly property int defaultBorderSize: defaultTheme.border_size
   readonly property color borderColor: chosenTheme.border_color || defaultTheme.border_color
   readonly property int windowRounding: chosenTheme.rounding >= 0 ? chosenTheme.rounding : defaultTheme.rounding
+
+  // Mouse cursor, from the theme. Hyprland draws it, the theme panel shows it
+  readonly property string cursorTheme: chosenTheme.cursor || defaultTheme.cursor
+  readonly property int cursorSize: chosenTheme.cursor_size || defaultTheme.cursor_size
 
   // App launcher
   readonly property int launcherRadius: 18

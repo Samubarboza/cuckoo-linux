@@ -176,6 +176,12 @@ PanelWindow {
         width: parent.width
         visible: root.selectedSection === "windows"
       }
+
+      ThemeCursorSection {
+        width: parent.width
+        visible: root.selectedSection === "cursor"
+        active: root.shown && visible
+      }
     }
   }
 
