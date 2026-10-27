@@ -5,7 +5,7 @@ import Quickshell.Io
 import QtQuick
 
 // One source of truth for the bar look: sizes, fonts and colors.
-// The accent, the font, the opacity, the border and the corners come from the theme, so they change live with cuckoo-theme.
+// The accent, the fonts, the opacity, the border, the corners and the cursor come from the theme, so they change live with cuckoo-theme.
 Singleton {
   // The theme made by cuckoo-theme. Until that file exists, the default theme of the package.
   FileView {
@@ -17,11 +17,16 @@ Singleton {
       id: chosenTheme
       property string accent
       property string font
+      property string font_style
+      property string terminal_font
+      property string terminal_font_style
       property real window_opacity
       // -1 until the file is read, because 0 is a real value: no border, square corners
       property int border_size: -1
       property string border_color
       property int rounding: -1
+      property string cursor
+      property int cursor_size
     }
   }
   FileView {
@@ -31,10 +36,15 @@ Singleton {
       id: defaultTheme
       property string accent
       property string font
+      property string font_style
+      property string terminal_font
+      property string terminal_font_style
       property real window_opacity
       property int border_size
       property string border_color
       property int rounding
+      property string cursor
+      property int cursor_size
     }
   }
 
@@ -44,6 +54,10 @@ Singleton {
 
   // Fonts
   readonly property string fontFamily: chosenTheme.font || defaultTheme.font
+  // The bar only takes the family. The style and the terminal font are for the theme panel
+  readonly property string fontStyle: chosenTheme.font_style || defaultTheme.font_style
+  readonly property string terminalFont: chosenTheme.terminal_font || defaultTheme.terminal_font
+  readonly property string terminalFontStyle: chosenTheme.terminal_font_style || defaultTheme.terminal_font_style
   readonly property string iconFont: "JetBrainsMono Nerd Font Propo"
   readonly property int fontSize: 13
   readonly property int fontWeight: Font.Medium
@@ -88,6 +102,10 @@ Singleton {
   readonly property int defaultBorderSize: defaultTheme.border_size
   readonly property color borderColor: chosenTheme.border_color || defaultTheme.border_color
   readonly property int windowRounding: chosenTheme.rounding >= 0 ? chosenTheme.rounding : defaultTheme.rounding
+
+  // Mouse cursor, from the theme. Hyprland draws it, the theme panel shows it
+  readonly property string cursorTheme: chosenTheme.cursor || defaultTheme.cursor
+  readonly property int cursorSize: chosenTheme.cursor_size || defaultTheme.cursor_size
 
   // App launcher
   readonly property int launcherRadius: 18

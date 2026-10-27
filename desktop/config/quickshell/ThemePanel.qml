@@ -16,6 +16,7 @@ PanelWindow {
   // The mouse and the arrows move the same selection
   property int selectedIndex: 0
   readonly property string selectedSection: sections[selectedIndex]
+  property bool isConfirmingReset: false
 
   implicitWidth: panelWidth
   implicitHeight: panelHeight
@@ -52,6 +53,11 @@ PanelWindow {
     Keys.onEscapePressed: root.close()
     Keys.onUpPressed: root.selectedIndex = (root.selectedIndex + root.sections.length - 1) % root.sections.length
     Keys.onDownPressed: root.selectedIndex = (root.selectedIndex + 1) % root.sections.length
+    // Right and Tab go into the section, Left comes back. The keys the section does not use
+    // come up to the card, so Esc closes from anywhere
+    Keys.onRightPressed: root.focusSectionContent()
+    Keys.onTabPressed: root.focusSectionContent()
+    Keys.onLeftPressed: card.forceActiveFocus()
 
     Behavior on opacity {
       NumberAnimation { id: fade; duration: 220; easing.type: Easing.OutCubic }
@@ -131,6 +137,39 @@ PanelWindow {
       }
     }
 
+    // Reset, at the bottom of the sections. The first click asks to confirm,
+    // so one click by mistake changes nothing
+    Rectangle {
+      anchors.left: sectionList.left
+      anchors.right: sectionList.right
+      anchors.bottom: sectionList.bottom
+      height: 40
+      radius: Theme.themePanelSectionRadius
+      color: root.isConfirmingReset ? Theme.redSoft : resetHover.hovered ? Theme.selected : "transparent"
+      border.width: 1
+      border.color: root.isConfirmingReset ? Theme.redLine : "transparent"
+
+      Text {
+        anchors.left: parent.left
+        anchors.leftMargin: 14
+        anchors.verticalCenter: parent.verticalCenter
+        text: Language.text(root.isConfirmingReset ? "confirmReset" : "reset")
+        color: root.isConfirmingReset ? Theme.red : Theme.soft
+        font.family: Theme.fontFamily; font.pixelSize: 14
+        font.weight: root.isConfirmingReset ? Font.DemiBold : Font.Medium
+      }
+
+      HoverHandler { id: resetHover }
+      TapHandler { onTapped: root.pressReset() }
+    }
+
+    // Without a second click, the button goes back to Reset
+    Timer {
+      id: resetConfirmTimer
+      interval: 3000
+      onTriggered: root.isConfirmingReset = false
+    }
+
     // Line between the sections and the content
     Rectangle {
       id: divider
@@ -142,8 +181,9 @@ PanelWindow {
       color: Theme.line
     }
 
-    // The content of the chosen section
+    // The content of the chosen section. A section with a focusItem can take the keyboard
     Column {
+      id: sectionContent
       anchors.top: sectionList.top
       anchors.left: divider.right
       anchors.right: parent.right
@@ -161,10 +201,31 @@ PanelWindow {
         visible: root.selectedSection === "colors"
       }
 
+      ThemeFontsSection {
+        width: parent.width
+        visible: root.selectedSection === "fonts"
+      }
+
       ThemeWindowsSection {
         width: parent.width
         visible: root.selectedSection === "windows"
       }
+
+      ThemeCursorSection {
+        width: parent.width
+        visible: root.selectedSection === "cursor"
+        active: root.shown && visible
+      }
+    }
+  }
+
+  // A hidden section loses the keyboard, so the card takes it back
+  onSelectedIndexChanged: card.forceActiveFocus()
+
+  function focusSectionContent() {
+    for (var i = 0; i < sectionContent.children.length; i++) {
+      var section = sectionContent.children[i];
+      if (section.visible && section.focusItem) section.focusItem.forceActiveFocus();
     }
   }
 
@@ -178,6 +239,19 @@ PanelWindow {
   }
   function close() {
     shown = false;
+    isConfirmingReset = false;
+  }
+
+  // The sliders and the palettes read the theme, so they go back by themselves
+  function pressReset() {
+    if (!isConfirmingReset) {
+      isConfirmingReset = true;
+      resetConfirmTimer.restart();
+      return;
+    }
+    isConfirmingReset = false;
+    resetConfirmTimer.stop();
+    Quickshell.execDetached(["cuckoo-theme", "reset"]);
   }
   function toggle() {
     if (shown) close();

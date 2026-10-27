@@ -10,10 +10,13 @@
 #   cuckoo-theme apply                 write the files and reload the running programs
 #   cuckoo-theme set <key> <value>...  save one or more user choices and apply them once
 #   cuckoo-theme reset                 go back to the default theme and apply it
+#   cuckoo-theme fonts                 print the fonts and styles that set accepts, as json
+#   cuckoo-theme terminal-fonts        the same, only the monospace fonts
+#   cuckoo-theme cursors               print the cursor themes that set accepts, as json
 
 set -euo pipefail
 
-usage="Usage: cuckoo-theme generate | apply | set <key> <value> [<key> <value>...] | reset"
+usage="Usage: cuckoo-theme generate | apply | set <key> <value> [<key> <value>...] | reset | fonts | terminal-fonts | cursors"
 
 default_theme_file="/usr/share/cuckoo/theme.json"
 user_config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}"
@@ -27,6 +30,8 @@ system_font_size=11
 
 font_name_pattern='^[A-Za-z0-9 ._-]+$'
 cursor_name_pattern='^[A-Za-z0-9][A-Za-z0-9._-]*$'
+# Where the cursor themes live, the user folders first
+cursor_icon_dirs=("${XDG_DATA_HOME:-${HOME}/.local/share}/icons" "${HOME}/.icons" /usr/share/icons)
 
 # The final value of each key, in the order of the default theme file, and its default value
 declare -A theme=()
@@ -68,7 +73,7 @@ is_installed_cursor() {
   local cursor_name="$1" icons_dir
   [[ "${cursor_name}" =~ ${cursor_name_pattern} ]] || return 1
 
-  for icons_dir in "${XDG_DATA_HOME:-${HOME}/.local/share}/icons" "${HOME}/.icons" /usr/share/icons; do
+  for icons_dir in "${cursor_icon_dirs[@]}"; do
     [[ -d "${icons_dir}/${cursor_name}/cursors" ]] && return 0
   done
   return 1
@@ -82,7 +87,7 @@ is_valid_value() {
     accent | border_color) is_color "${value}" ;;
     border_size) is_whole_number_between "${value}" 0 10 ;;
     rounding) is_whole_number_between "${value}" 0 30 ;;
-    cursor_size) is_whole_number_between "${value}" 16 64 ;;
+    cursor_size) is_whole_number_between "${value}" 16 48 ;;
     window_opacity | inactive_window_opacity) is_opacity "${value}" ;;
     font | terminal_font) is_installed_font "${value}" ;;
     font_style) is_installed_font_style "${theme[font]}" "${value}" ;;
@@ -407,6 +412,45 @@ reset_theme() {
   apply_theme
 }
 
+# The fonts that set accepts, as json: each family with its styles, upright first and then by weight.
+# A variable font gives its weight as a range, so it sorts as 0.
+list_fonts() {
+  local font_filter="$1"
+
+  fc-list --format '%{family[0]}\t%{style[0]}\t%{slant}\t%{weight}\n' "${font_filter}" \
+    | jq -R -s -c --arg name_pattern "${font_name_pattern}" '
+      split("\n") | map(select(length > 0) | split("\t")
+        | select((.[0] | test($name_pattern)) and (.[1] | test($name_pattern))))
+      | group_by(.[0])
+      | map({
+          family: .[0][0],
+          styles: (unique_by(.[1]) | sort_by((.[2] | tonumber? // 0), (.[3] | tonumber? // 0)) | map(.[1]))
+        })'
+}
+
+# The cursor themes that set accepts, as json, with the name from their index.theme.
+# A theme in a user folder wins over the same theme in the system.
+list_cursors() {
+  local icons_dir theme_dir cursor_id cursor_name
+  local -A listed_cursors=()
+
+  for icons_dir in "${cursor_icon_dirs[@]}"; do
+    for theme_dir in "${icons_dir}"/*/; do
+      cursor_id="$(basename -- "${theme_dir}")"
+      [[ -d "${theme_dir}cursors" && "${cursor_id}" =~ ${cursor_name_pattern} ]] || continue
+      [[ -z "${listed_cursors[${cursor_id}]:-}" ]] || continue
+      listed_cursors[${cursor_id}]=1
+
+      cursor_name=""
+      if [[ -f "${theme_dir}index.theme" ]]; then
+        cursor_name="$(sed -n '/^Name=/{s///p;q}' "${theme_dir}index.theme")"
+      fi
+      printf '%s\t%s\n' "${cursor_id}" "${cursor_name:-${cursor_id}}"
+    done
+  done | jq -R -s -c 'split("\n") | map(select(length > 0) | split("\t") | {id: .[0], name: .[1]})
+    | sort_by(.name | ascii_downcase)'
+}
+
 # One change at a time, so two quick changes never write the user file at the same time.
 # The lock is freed when the script ends.
 lock_theme() {
@@ -426,5 +470,9 @@ case "${1:-} $#" in
     set_theme_values "${@:2}"
     ;;
   "reset 1") reset_theme ;;
+  # Only fonts with English letters, so the symbol and emoji fonts are left out
+  "fonts 1") list_fonts ":lang=en" ;;
+  "terminal-fonts 1") list_fonts ":spacing=mono:lang=en" ;;
+  "cursors 1") list_cursors ;;
   *) fail "${usage}" ;;
 esac
