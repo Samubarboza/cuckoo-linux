@@ -52,6 +52,11 @@ PanelWindow {
     Keys.onEscapePressed: root.close()
     Keys.onUpPressed: root.selectedIndex = (root.selectedIndex + root.sections.length - 1) % root.sections.length
     Keys.onDownPressed: root.selectedIndex = (root.selectedIndex + 1) % root.sections.length
+    // Right and Tab go into the section, Left comes back. The keys the section does not use
+    // come up to the card, so Esc closes from anywhere
+    Keys.onRightPressed: root.focusSectionContent()
+    Keys.onTabPressed: root.focusSectionContent()
+    Keys.onLeftPressed: card.forceActiveFocus()
 
     Behavior on opacity {
       NumberAnimation { id: fade; duration: 220; easing.type: Easing.OutCubic }
@@ -142,8 +147,9 @@ PanelWindow {
       color: Theme.line
     }
 
-    // The content of the chosen section
+    // The content of the chosen section. A section with a focusItem can take the keyboard
     Column {
+      id: sectionContent
       anchors.top: sectionList.top
       anchors.left: divider.right
       anchors.right: parent.right
@@ -165,6 +171,16 @@ PanelWindow {
         width: parent.width
         visible: root.selectedSection === "windows"
       }
+    }
+  }
+
+  // A hidden section loses the keyboard, so the card takes it back
+  onSelectedIndexChanged: card.forceActiveFocus()
+
+  function focusSectionContent() {
+    for (var i = 0; i < sectionContent.children.length; i++) {
+      var section = sectionContent.children[i];
+      if (section.visible && section.focusItem) section.focusItem.forceActiveFocus();
     }
   }
 
