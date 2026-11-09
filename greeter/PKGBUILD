@@ -4,7 +4,7 @@
 # The version follows the ReGreet release we build from.
 pkgname=cuckoo-greeter
 pkgver=0.5.0
-pkgrel=3
+pkgrel=4
 pkgdesc="Login screen for Cuckoo Linux"
 arch=('x86_64')
 url="https://github.com/Samubarboza/cuckoo-linux"
@@ -14,7 +14,7 @@ makedepends=('cargo')
 options=('!debug')
 provides=('greetd-regreet')
 conflicts=('greetd-regreet')
-backup=('etc/greetd/cuckoo.toml' 'etc/greetd/regreet.toml' 'etc/greetd/regreet.css' 'etc/greetd/hyprland.conf')
+backup=('etc/greetd/cuckoo.toml' 'etc/greetd/regreet.toml' 'etc/greetd/regreet.css' 'etc/greetd/hyprland.lua')
 _upstream="ReGreet-${pkgver}"
 source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs/tags/${pkgver}.tar.gz"
         "0001-cuckoo-login-layout.patch"
@@ -29,7 +29,7 @@ source=("${_upstream}.tar.gz::https://github.com/rharish101/ReGreet/archive/refs
         "cuckoo.toml"
         "regreet.toml"
         "regreet.css"
-        "hyprland.conf"
+        "hyprland.lua"
         "lock.svg"
         "greetd-override.conf"
         "greetd-config")
@@ -72,7 +72,7 @@ package() {
     install -Dm 0644 -- "cuckoo.toml" "${pkgdir}/etc/greetd/cuckoo.toml"
     install -Dm 0644 -- "regreet.toml" "${pkgdir}/etc/greetd/regreet.toml"
     install -Dm 0644 -- "regreet.css" "${pkgdir}/etc/greetd/regreet.css"
-    install -Dm 0644 -- "hyprland.conf" "${pkgdir}/etc/greetd/hyprland.conf"
+    install -Dm 0644 -- "hyprland.lua" "${pkgdir}/etc/greetd/hyprland.lua"
     install -Dm 0644 -- "lock.svg" "${pkgdir}/usr/share/cuckoo/lock.svg"
     install -Dm 0644 -- "greetd-override.conf" \
         "${pkgdir}/usr/lib/systemd/system/greetd.service.d/cuckoo.conf"

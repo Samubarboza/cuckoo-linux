@@ -27,7 +27,7 @@ PanelWindow {
   WlrLayershell.namespace: "cuckoo-theme-panel"
   WlrLayershell.keyboardFocus: shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-  // Hyprland sends super+T here (quickshell:theme in hyprland.conf)
+  // Hyprland sends super+T here (quickshell:theme in hyprland.lua)
   GlobalShortcut {
     name: "theme"
     description: "Open or close the theme panel"
