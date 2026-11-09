@@ -2,7 +2,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// One row per screen with a bar of the scales that fit its resolution. A click applies the scale at once and saves it in monitors.conf.
+// One row per screen with a bar of the scales that fit its resolution. A click applies the scale at once and saves it in monitors.lua.
 BarPopup {
   id: root
   property var screens: []
@@ -69,7 +69,7 @@ BarPopup {
   Process { id: applyProc; stdout: StdioCollector { id: aout; onStreamFinished: if (aout.text.trim() !== "ok") readProc.running = true } }
   // A screen plugged in or out while the popup is open shows at once
   Connections { target: Quickshell; function onScreensChanged() { if (root.shown) readProc.running = true; } }
-  FileView { id: monitorsFile; path: Quickshell.env("HOME") + "/.config/hypr/monitors.conf"; blockLoading: true; watchChanges: true; onFileChanged: reload() }
+  FileView { id: monitorsFile; path: Quickshell.env("HOME") + "/.config/hypr/monitors.lua"; blockLoading: true; watchChanges: true; onFileChanged: reload() }
 
   function readScreens(text) {
     var monitors = [];
@@ -119,10 +119,11 @@ BarPopup {
   }
   // Replace the line of this screen and keep every other line as it is
   function saveScale(rule, scale) {
+    var screenLineStart = "hl.monitor({ output = " + JSON.stringify(rule) + ",";
     var keptLines = monitorsFile.text().split("\n").filter(function (savedLine) {
-      return savedLine !== "" && savedLine.indexOf("monitor = " + rule + ",") !== 0;
+      return savedLine !== "" && savedLine.indexOf(screenLineStart) !== 0;
     });
-    keptLines.push("monitor = " + rule + ", preferred, auto, " + scale);
+    keptLines.push(screenLineStart + " mode = \"preferred\", position = \"auto\", scale = " + scale + " })");
     monitorsFile.setText(keptLines.join("\n") + "\n");
   }
 }

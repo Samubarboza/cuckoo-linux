@@ -157,26 +157,29 @@ write_file() {
   mv -f -- "${temporary_file}" "${target_file}"
 }
 
-# The border, corners, opacity and cursor. hyprland.conf loads it after the Cuckoo window style.
+# The border, corners, opacity and cursor. hyprland.lua loads it after the Cuckoo window style.
 make_hyprland_config() {
   cat <<EOF
-# Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set.
+-- Made by cuckoo-theme, changes here are lost. Use cuckoo-theme set.
 
-general {
-    border_size = ${theme[border_size]}
-    col.active_border = rgba(${theme[border_color]#\#}ee)
-}
+hl.config({
+    general = {
+        border_size = ${theme[border_size]},
+        col = {
+            active_border = "rgba(${theme[border_color]#\#}ee)",
+        },
+    },
+    decoration = {
+        rounding = ${theme[rounding]},
+        active_opacity = ${theme[window_opacity]},
+        inactive_opacity = ${theme[inactive_window_opacity]},
+    },
+})
 
-decoration {
-    rounding = ${theme[rounding]}
-    active_opacity = ${theme[window_opacity]}
-    inactive_opacity = ${theme[inactive_window_opacity]}
-}
-
-env = XCURSOR_THEME,${theme[cursor]}
-env = XCURSOR_SIZE,${theme[cursor_size]}
-env = HYPRCURSOR_THEME,${theme[cursor]}
-env = HYPRCURSOR_SIZE,${theme[cursor_size]}
+hl.env("XCURSOR_THEME", "${theme[cursor]}")
+hl.env("XCURSOR_SIZE", "${theme[cursor_size]}")
+hl.env("HYPRCURSOR_THEME", "${theme[cursor]}")
+hl.env("HYPRCURSOR_SIZE", "${theme[cursor_size]}")
 EOF
 }
 
@@ -327,7 +330,7 @@ generate_theme() {
 
   install -d -m 0755 -- "${output_dir}" "${qt_config_dir}"
   write_file "${output_dir}/theme.json" "${theme_json}"
-  write_file "${output_dir}/hyprland.conf" "${hyprland_config}"
+  write_file "${output_dir}/hyprland.lua" "${hyprland_config}"
   write_file "${output_dir}/gtk.css" "${gtk_css}"
   write_file "${output_dir}/qt6ct-colors.conf" "${qt_palette}"
   write_file "${qt_config_dir}/qt6ct.conf" "${qt_config}"
